@@ -14,8 +14,8 @@ parser = argparse.ArgumentParser(description='liBERTy testbed')
 tp = lambda x:list(map(str, x.split(',')))
 parser.add_argument('-l', '--num_of_learn', type=int, default=100, help='number of learn, which determins the rate of dataset for the use of learning.')
 parser.add_argument('-e', '--max_epoch', type=int, default=20, help='number of epoch to be executed for learning loop')
-parser.add_argument('-b', '--batch_size', type=int, default=20, help='size of batch for learning process')
-parser.add_argument('-t', '--transformflags', type=tp, default=['r','i','d','s'], help='r:synreplace(1) i:randinsert(3) d:randdelete(0.15) s:randswap(2)')
+parser.add_argument('-b', '--batch_size', type=int, default=64, help='size of batch for learning process')
+parser.add_argument('-t', '--transformflags', type=tp, default=['r','i','d','s'], help='r:synreplace(1) i:randinsert(3) d:randdelete(0.15) s:randswap(2) n:none')
 parser.add_argument('-a', '--article_type', type=int, default=0, choices=[0,1], help='article type (0: dokujo_it, 1:dokujo_peachy')
 parser.add_argument('-f', '--jupyter', default='CMD', help='executed from jupyter')
 args = parser.parse_args()
@@ -29,7 +29,7 @@ if args.jupyter == 'CMD':
 else:
     numof_learn = 100
     max_epoch = 20
-    batch_size = 50
+    batch_size = 64
     transformflags = ['r','i','d','s']
     articletype = 0
 articlelabel = ['dokujo_it', 'dokujo_peachy']
@@ -62,7 +62,6 @@ import os
 #os.environ['KMP_DUPLICATE_LIB_OK']='TRUE' # ライブラリ重複を無視
 import gzip
 import shutil
-import sqlite3
 import random
 from math import ceil
 import re
@@ -71,10 +70,8 @@ import glob
 import torchvision
 import statistics
 import numpy as np
-import pickle
 import statistics
 import MeCab
-import re
 import copy
 import scipy.stats as stats
 
@@ -195,14 +192,15 @@ class randswap(object):
 # In[6]:
 
 
+#処理をした結果を保存するファイル名 
+tsv_fname = "all_text.tsv" 
+'''
 #urllib.request.urlretrieve("https://www.rondhuit.com/download/ldcc-20140209.tar.gz", "ldcc-20140209.tar.gz")
 # ダウンロードした圧縮ファイルのパスを設定
 #tgz_fname = "ldcc-20140209.tar.gz" 
 # 2つをニュースメディアのジャンルを選定
 mydata = '/export/livedoor' 
-#処理をした結果を保存するファイル名 
-tsv_fname = "all_text.tsv" 
-
+'''
 def remove_brackets(inp):
     output = re.sub(u'[〃-〿]', '',(re.sub('＝|=|×|\(|\)|“|”|（|）|／|\[|\]| |　|…|・|\n|\t|/|＜|＞|@|＠', '', re.sub(u'[ℊ-⿻]', '', inp)))) #210A ~ 2FFF
     return output
@@ -502,7 +500,7 @@ def dicttoken(sentence):
     return ids, masks
 
 
-# In[25]:
+# In[ ]:
 
 
 h_input_ids, h_attention_masks = dicttoken(hsentences)
@@ -513,7 +511,7 @@ kk_input_ids, kk_attention_masks = dicttoken(kksentences)
 s_input_ids, s_attention_masks = dicttoken(ssentences)
 
 
-# In[26]:
+# In[ ]:
 
 
 # リストに入ったtensorを縦方向（dim=0）へ結合
@@ -534,7 +532,7 @@ s_attention_masks = torch.cat(s_attention_masks, dim=0)
 labels = torch.tensor(labels)
 
 
-# In[27]:
+# In[ ]:
 
 
 # 確認
@@ -554,7 +552,7 @@ print(ssentences.size)
 '''
 
 
-# In[28]:
+# In[ ]:
 
 
 from torch.utils.data import TensorDataset, random_split
@@ -572,13 +570,13 @@ kkdataset = TensorDataset(kk_input_ids, kk_attention_masks, labels)
 sdataset = TensorDataset(s_input_ids, s_attention_masks, labels)
 
 
-# In[29]:
+# In[ ]:
 
 
 type(hdataset[0][0])
 
 
-# In[30]:
+# In[ ]:
 
 
 num_dataset = len(hdataset)
@@ -592,7 +590,7 @@ val_size = len(hdataset) - train_size
 #print('検証データ数:{}'.format(val_size))
 
 
-# In[31]:
+# In[ ]:
 
 
 # データローダーの作成
@@ -651,7 +649,7 @@ s_train_dataset = MySubset(sdataset, indices[:train_size], data_transform)
 s_val_dataset = MySubset(sdataset, indices[train_size:])
 
 
-# In[32]:
+# In[ ]:
 
 
 # 訓練データローダー
@@ -690,7 +688,7 @@ s_validation_dataloader = DataLoader(
             s_val_dataset, batch_size = 1, shuffle = False, num_workers = 8)
 
 
-# In[33]:
+# In[ ]:
 
 
 from transformers import BertForSequenceClassification,AdamW,BertConfig
@@ -708,7 +706,7 @@ def loadmodel():
     return model, optimizer
 
 
-# In[34]:
+# In[ ]:
 
 
 alloutputs = []
@@ -759,7 +757,7 @@ def validation(model, dataloader):
     return val_loss, alloutputs
 
 
-# In[35]:
+# In[ ]:
 
 
 # 学習の実行
@@ -784,7 +782,7 @@ kk_train_loss = 0
 s_train_loss = 0
 
 
-# In[36]:
+# In[ ]:
 
 
 model, optimizer = loadmodel()
@@ -796,7 +794,7 @@ for epoch in range(max_epoch):
 h_test_loss_ = validation(model, h_validation_dataloader)
 
 
-# In[37]:
+# In[ ]:
 
 
 model, optimizer = loadmodel()
@@ -808,7 +806,7 @@ for epoch in range(max_epoch):
 t_test_loss_ = validation(model, t_validation_dataloader)
 
 
-# In[38]:
+# In[ ]:
 
 
 model, optimizer = loadmodel()
@@ -820,7 +818,7 @@ for epoch in range(max_epoch):
 a_test_loss_ = validation(model, a_validation_dataloader)
 
 
-# In[39]:
+# In[ ]:
 
 
 model, optimizer = loadmodel()
@@ -832,7 +830,7 @@ for epoch in range(max_epoch):
 k_test_loss_ = validation(model, k_validation_dataloader)
 
 
-# In[40]:
+# In[ ]:
 
 
 model, optimizer = loadmodel()
@@ -844,7 +842,7 @@ for epoch in range(max_epoch):
 kk_test_loss_ = validation(model, kk_validation_dataloader)
 
 
-# In[41]:
+# In[ ]:
 
 
 model, optimizer = loadmodel()
@@ -856,7 +854,7 @@ for epoch in range(max_epoch):
 s_test_loss_ = validation(model, s_validation_dataloader)
 
 
-# In[42]:
+# In[ ]:
 
 
 sents = []
@@ -871,7 +869,7 @@ sents = pd.DataFrame(sents)
 
 # # type soroete X train test Y train test wo kaizan suru
 
-# In[43]:
+# In[ ]:
 
 
 h_pred_ = []
@@ -890,7 +888,7 @@ for i in range(len(h_test_loss_[1])):
     s_pred_.append(np.argmax(np.array(s_test_loss_[1][i])))
 
 
-# In[44]:
+# In[ ]:
 
 
 vlabel = []
@@ -899,7 +897,7 @@ for _,_,label in h_validation_dataloader:
     vlabel.append(copy.deepcopy(label.detach().numpy()))
 
 
-# In[45]:
+# In[ ]:
 
 
 h_pred_df = pd.DataFrame(h_pred_, columns=['h_pred_label'])
@@ -913,7 +911,7 @@ accuracy_df = pd.concat([h_pred_df, t_pred_df, a_pred_df, k_pred_df, kk_pred_df,
 accuracy_df.head(5)
 
 
-# In[46]:
+# In[ ]:
 
 
 hpreds = h_pred_df.values
@@ -935,7 +933,7 @@ for i in range(len(hpreds)):
     preds.append(pred)
 
 
-# In[47]:
+# In[ ]:
 
 
 preds_df = pd.DataFrame(preds, columns=['pred_label'])
@@ -946,7 +944,7 @@ ensaccuracy_df = pd.concat([preds_df, label_df], axis=1)
 
 # # pred_label accuracy
 
-# In[48]:
+# In[ ]:
 
 
 cor = 0
@@ -971,7 +969,7 @@ for i in range(len(preds_df)):
 
 # # pred_label F1
 
-# In[49]:
+# In[ ]:
 
 
 '''
@@ -983,13 +981,13 @@ sp = rnum/spnum
 '''
 
 
-# In[50]:
+# In[ ]:
 
 
 (hpreds == label_df.values).sum()
 
 
-# In[51]:
+# In[ ]:
 
 
 from sklearn.metrics import f1_score
@@ -1000,7 +998,7 @@ def fscore(pdf):
     return f1_score(pdf, label_df.values)
 
 
-# In[52]:
+# In[ ]:
 
 
 print('head', accuracy(hpreds), fscore(hpreds))
@@ -1022,7 +1020,7 @@ f.write('all,'+str(accuracy(preds_df.values))+','+str(fscore(preds_df.values))+'
 f.close()
 
 
-# In[53]:
+# In[ ]:
 
 
 H_train_loss = []
@@ -1041,7 +1039,7 @@ for i in range(max_epoch):
     S_train_loss.append(s_train_loss_[i][0])
 
 
-# In[54]:
+# In[ ]:
 
 
 import csv
@@ -1053,7 +1051,7 @@ writer.writerows(map(lambda h, t, a, k, kk, s: [h, t, a, k, kk, s], H_train_loss
 f.close()
 
 
-# In[55]:
+# In[ ]:
 
 
 import matplotlib.pyplot as plt
