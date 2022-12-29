@@ -15,8 +15,12 @@ tp = lambda x:list(map(str, x.split(',')))
 parser.add_argument('-l', '--num_of_learn', type=int, default=100, help='number of learn, which determins the rate of dataset for the use of learning.')
 parser.add_argument('-e', '--max_epoch', type=int, default=20, help='number of epoch to be executed for learning loop')
 parser.add_argument('-b', '--batch_size', type=int, default=64, help='size of batch for learning process')
-parser.add_argument('-t', '--transformflags', type=tp, default=['r','i','d','s'], help='r:synreplace(1) i:randinsert(3) d:randdelete(0.15) s:randswap(2) n:none')
 parser.add_argument('-a', '--article_type', type=int, default=0, choices=[0,1], help='article type (0: dokujo_it, 1:dokujo_peachy')
+parser.add_argument('-t', '--transformflags', type=tp, default=['r','i','d','s'], help='r:synreplace(1) i:randinsert(3) d:randdelete(0.15) s:randswap(2) n:none')
+parser.add_argument('-r', '--synreplace_rate', type=int, default=1, help='rate of synreplace_rate par sentence as int for transformers.')
+parser.add_argument('-i', '--randinsert_rate', type=int, default=3, help='rate of randinsert of dataset par sentence as int for transformers.')
+parser.add_argument('-d', '--randdelete_rate', type=float, default=0.15, help='probability of lranddelete in a sentence as float of dataset for transformers.')
+parser.add_argument('-s', '--randswap_rate', type=int, default=2, help='rate of randswap of dataset per sentence as int for transformers.')
 parser.add_argument('-f', '--jupyter', default='CMD', help='executed from jupyter')
 args = parser.parse_args()
 
@@ -25,6 +29,10 @@ if args.jupyter == 'CMD':
     max_epoch = args.max_epoch
     batch_size = args.batch_size
     transformflags = args.transformflags
+    synreplace_rate = args.synreplace_rate
+    randinsert_rate = args.randinsert_rate
+    randdelete_rate = args.randdelete_rate
+    randswap_rate = args.randswap_rate
     articletype = args.article_type
 else:
     numof_learn = 100
@@ -35,7 +43,9 @@ else:
 articlelabel = ['dokujo_it', 'dokujo_peachy']
 print("num_of_learn:",numof_learn," max_epoch:", max_epoch," num_of_batch:", batch_size,
       " articletype:", articlelabel[articletype])
-filestr = "l:"+str(numof_learn)+"_e:"+str(max_epoch)+"_b:"+str(batch_size)+"_t:"+''.join(transformflags)+"_a:"+articlelabel[articletype]
+filestr = "l:"+str(numof_learn)+"_e:"+str(max_epoch)+"_b:"+str(batch_size)+"_t:"+''.join(transformflags)+\
+    "_r:"+str(synreplace_rate)+'_i:'+str(randinsert_rate)+'_d:'+str(randdelete_rate)+'_s:'+str(randswap_rate)+\
+    "_a:"+articlelabel[articletype]
 print(filestr)
 
 
@@ -596,16 +606,16 @@ val_size = len(hdataset) - train_size
 # データローダーの作成
 transformmethods = []
 if 'r' in transformflags:
-    transformmethods.append(synreplace(1))
+    transformmethods.append(synreplace(synreplace_rate))
 #    print("synreplace")
 if 'i' in transformflags:
-    transformmethods.append(randinsert(3))
+    transformmethods.append(randinsert(randinsert_rate))
 #    print("randinsert")
 if 'd' in transformflags:
-    transformmethods.append(randdelete(0.15))
+    transformmethods.append(randdelete(randdelete_rate))
 #    print("randdelete")
 if 's' in transformflags:
-    transformmethods.append(randswap(2))
+    transformmethods.append(randswap(randswap_rate))
 #    print("randswap")
 data_transform = transforms.Compose(transformmethods)
 
@@ -617,8 +627,8 @@ class MySubset(torch.utils.data.Dataset):
 
     def __getitem__(self, idx):
         xa, mask, label = self.dataset[self.indices[idx]]
-#        if self.transform:
-#            xa = self.transform(xa)
+        if self.transform:
+            xa = self.transform(xa)
         return xa, mask, label
 
     def __len__(self):
