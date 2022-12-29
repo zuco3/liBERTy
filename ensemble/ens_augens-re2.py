@@ -500,7 +500,7 @@ def dicttoken(sentence):
     return ids, masks
 
 
-# In[ ]:
+# In[25]:
 
 
 h_input_ids, h_attention_masks = dicttoken(hsentences)
@@ -511,7 +511,7 @@ kk_input_ids, kk_attention_masks = dicttoken(kksentences)
 s_input_ids, s_attention_masks = dicttoken(ssentences)
 
 
-# In[ ]:
+# In[26]:
 
 
 # リストに入ったtensorを縦方向（dim=0）へ結合
@@ -532,7 +532,7 @@ s_attention_masks = torch.cat(s_attention_masks, dim=0)
 labels = torch.tensor(labels)
 
 
-# In[ ]:
+# In[27]:
 
 
 # 確認
@@ -552,7 +552,7 @@ print(ssentences.size)
 '''
 
 
-# In[ ]:
+# In[28]:
 
 
 from torch.utils.data import TensorDataset, random_split
@@ -570,13 +570,13 @@ kkdataset = TensorDataset(kk_input_ids, kk_attention_masks, labels)
 sdataset = TensorDataset(s_input_ids, s_attention_masks, labels)
 
 
-# In[ ]:
+# In[29]:
 
 
 type(hdataset[0][0])
 
 
-# In[ ]:
+# In[30]:
 
 
 num_dataset = len(hdataset)
@@ -590,7 +590,7 @@ val_size = len(hdataset) - train_size
 #print('検証データ数:{}'.format(val_size))
 
 
-# In[ ]:
+# In[31]:
 
 
 # データローダーの作成
@@ -649,7 +649,7 @@ s_train_dataset = MySubset(sdataset, indices[:train_size], data_transform)
 s_val_dataset = MySubset(sdataset, indices[train_size:])
 
 
-# In[ ]:
+# In[32]:
 
 
 # 訓練データローダー
@@ -688,7 +688,7 @@ s_validation_dataloader = DataLoader(
             s_val_dataset, batch_size = 1, shuffle = False, num_workers = 8)
 
 
-# In[ ]:
+# In[33]:
 
 
 from transformers import BertForSequenceClassification,AdamW,BertConfig
@@ -706,7 +706,7 @@ def loadmodel():
     return model, optimizer
 
 
-# In[ ]:
+# In[34]:
 
 
 alloutputs = []
@@ -757,7 +757,7 @@ def validation(model, dataloader):
     return val_loss, alloutputs
 
 
-# In[ ]:
+# In[35]:
 
 
 # 学習の実行
@@ -782,7 +782,7 @@ kk_train_loss = 0
 s_train_loss = 0
 
 
-# In[ ]:
+# In[36]:
 
 
 model, optimizer = loadmodel()
@@ -794,7 +794,7 @@ for epoch in range(max_epoch):
 h_test_loss_ = validation(model, h_validation_dataloader)
 
 
-# In[ ]:
+# In[37]:
 
 
 model, optimizer = loadmodel()
@@ -806,7 +806,7 @@ for epoch in range(max_epoch):
 t_test_loss_ = validation(model, t_validation_dataloader)
 
 
-# In[ ]:
+# In[38]:
 
 
 model, optimizer = loadmodel()
@@ -818,7 +818,7 @@ for epoch in range(max_epoch):
 a_test_loss_ = validation(model, a_validation_dataloader)
 
 
-# In[ ]:
+# In[39]:
 
 
 model, optimizer = loadmodel()
@@ -830,7 +830,7 @@ for epoch in range(max_epoch):
 k_test_loss_ = validation(model, k_validation_dataloader)
 
 
-# In[ ]:
+# In[40]:
 
 
 model, optimizer = loadmodel()
@@ -842,7 +842,7 @@ for epoch in range(max_epoch):
 kk_test_loss_ = validation(model, kk_validation_dataloader)
 
 
-# In[ ]:
+# In[41]:
 
 
 model, optimizer = loadmodel()
@@ -854,7 +854,7 @@ for epoch in range(max_epoch):
 s_test_loss_ = validation(model, s_validation_dataloader)
 
 
-# In[ ]:
+# In[42]:
 
 
 sents = []
@@ -869,7 +869,7 @@ sents = pd.DataFrame(sents)
 
 # # type soroete X train test Y train test wo kaizan suru
 
-# In[ ]:
+# In[43]:
 
 
 h_pred_ = []
@@ -888,7 +888,7 @@ for i in range(len(h_test_loss_[1])):
     s_pred_.append(np.argmax(np.array(s_test_loss_[1][i])))
 
 
-# In[ ]:
+# In[44]:
 
 
 vlabel = []
@@ -897,7 +897,7 @@ for _,_,label in h_validation_dataloader:
     vlabel.append(copy.deepcopy(label.detach().numpy()))
 
 
-# In[ ]:
+# In[45]:
 
 
 h_pred_df = pd.DataFrame(h_pred_, columns=['h_pred_label'])
@@ -911,7 +911,7 @@ accuracy_df = pd.concat([h_pred_df, t_pred_df, a_pred_df, k_pred_df, kk_pred_df,
 accuracy_df.head(5)
 
 
-# In[ ]:
+# In[46]:
 
 
 hpreds = h_pred_df.values
@@ -933,7 +933,7 @@ for i in range(len(hpreds)):
     preds.append(pred)
 
 
-# In[ ]:
+# In[47]:
 
 
 preds_df = pd.DataFrame(preds, columns=['pred_label'])
@@ -944,7 +944,7 @@ ensaccuracy_df = pd.concat([preds_df, label_df], axis=1)
 
 # # pred_label accuracy
 
-# In[ ]:
+# In[48]:
 
 
 cor = 0
@@ -969,7 +969,7 @@ for i in range(len(preds_df)):
 
 # # pred_label F1
 
-# In[ ]:
+# In[49]:
 
 
 '''
@@ -981,13 +981,13 @@ sp = rnum/spnum
 '''
 
 
-# In[ ]:
+# In[50]:
 
 
 (hpreds == label_df.values).sum()
 
 
-# In[ ]:
+# In[51]:
 
 
 from sklearn.metrics import f1_score
@@ -998,7 +998,7 @@ def fscore(pdf):
     return f1_score(pdf, label_df.values)
 
 
-# In[ ]:
+# In[52]:
 
 
 print('head', accuracy(hpreds), fscore(hpreds))
@@ -1020,7 +1020,7 @@ f.write('all,'+str(accuracy(preds_df.values))+','+str(fscore(preds_df.values))+'
 f.close()
 
 
-# In[ ]:
+# In[53]:
 
 
 H_train_loss = []
@@ -1039,7 +1039,7 @@ for i in range(max_epoch):
     S_train_loss.append(s_train_loss_[i][0])
 
 
-# In[ ]:
+# In[54]:
 
 
 import csv
@@ -1051,7 +1051,7 @@ writer.writerows(map(lambda h, t, a, k, kk, s: [h, t, a, k, kk, s], H_train_loss
 f.close()
 
 
-# In[ ]:
+# In[55]:
 
 
 import matplotlib.pyplot as plt
