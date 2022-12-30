@@ -22,7 +22,7 @@ parser.add_argument('-b', '--batch_size', type=int, default=64,
     help='size (defaualt 64) of batch for learning process')
 parser.add_argument('-a', '--article_type', type=int, default=0, choices=[0,1], 
     help='article type (0: dokujo_it=default, 1:dokujo_peachy')
-parser.add_argument('-t', '--transformflags', type=tp, default = ['n'], #default=['r','i','d','s'], 
+parser.add_argument('-t', '--transformflags', type=tp, default = 'n', #default='rids', 
     help='NLP-JP transformer (default n) r:synreplace i:randinsert d:randdelete s:randswap n:none')
 parser.add_argument('-r', '--synreplace_rate', type=int, default=1, 
     help='rate (default 1) of synreplace_rate par sentence as int for transformers.')
@@ -52,7 +52,7 @@ else:
     numof_validation = 200
     max_epoch = 20
     batch_size = 64
-    transformflags = ['n'] #['r','i','d','s']
+    transformflags = list('n') #'rids'
     synreplace_rate = 1
     randinsert_rate = 3
     randdelete_rate = 0.15
@@ -804,7 +804,7 @@ def validation(model, dataloader):
                     )
                 )
                 if numof_validation < iteration:
-                    print('validation quit')
+#                    print('validation quit')
                     break
     return loss, alloutputs
 
@@ -858,7 +858,7 @@ for epoch in range(max_epoch):
 t_test_loss_ = validation(model, t_validation_dataloader)
 
 
-# In[39]:
+# In[ ]:
 
 
 model, optimizer = loadmodel()
@@ -870,7 +870,7 @@ for epoch in range(max_epoch):
 a_test_loss_ = validation(model, a_validation_dataloader)
 
 
-# In[40]:
+# In[ ]:
 
 
 model, optimizer = loadmodel()
@@ -882,7 +882,7 @@ for epoch in range(max_epoch):
 k_test_loss_ = validation(model, k_validation_dataloader)
 
 
-# In[41]:
+# In[ ]:
 
 
 model, optimizer = loadmodel()
@@ -894,7 +894,7 @@ for epoch in range(max_epoch):
 kk_test_loss_ = validation(model, kk_validation_dataloader)
 
 
-# In[42]:
+# In[ ]:
 
 
 model, optimizer = loadmodel()
@@ -906,7 +906,7 @@ for epoch in range(max_epoch):
 s_test_loss_ = validation(model, s_validation_dataloader)
 
 
-# In[43]:
+# In[ ]:
 
 
 sents = []
@@ -921,7 +921,7 @@ sents = pd.DataFrame(sents)
 
 # # type soroete X train test Y train test wo kaizan suru
 
-# In[44]:
+# In[ ]:
 
 
 h_pred_ = []
@@ -940,7 +940,7 @@ for i in range(len(h_test_loss_[1])):
     s_pred_.append(np.argmax(np.array(s_test_loss_[1][i])))
 
 
-# In[45]:
+# In[ ]:
 
 
 vlabel = []
@@ -949,7 +949,7 @@ for _,_,label in h_validation_dataloader:
     vlabel.append(copy.deepcopy(label.detach().numpy()))
 
 
-# In[46]:
+# In[ ]:
 
 
 h_pred_df = pd.DataFrame(h_pred_, columns=['h_pred_label'])
@@ -963,7 +963,7 @@ accuracy_df = pd.concat([h_pred_df, t_pred_df, a_pred_df, k_pred_df, kk_pred_df,
 accuracy_df.head(5)
 
 
-# In[47]:
+# In[ ]:
 
 
 hpreds = h_pred_df.values
@@ -985,7 +985,7 @@ for i in range(len(hpreds)):
     preds.append(pred)
 
 
-# In[48]:
+# In[ ]:
 
 
 preds_df = pd.DataFrame(preds, columns=['pred_label'])
@@ -996,7 +996,7 @@ ensaccuracy_df = pd.concat([preds_df, label_df], axis=1)
 
 # # pred_label accuracy
 
-# In[49]:
+# In[ ]:
 
 
 cor = 0
@@ -1021,7 +1021,7 @@ for i in range(len(preds_df)):
 
 # # pred_label F1
 
-# In[50]:
+# In[ ]:
 
 
 '''
@@ -1033,7 +1033,7 @@ sp = rnum/spnum
 '''
 
 
-# In[51]:
+# In[ ]:
 
 
 from sklearn.metrics import f1_score
@@ -1044,7 +1044,7 @@ def fscore(pdf):
     return f1_score(pdf, label_df.values[:len(pdf)])
 
 
-# In[52]:
+# In[ ]:
 
 
 print('head', accuracy(hpreds), fscore(hpreds))
@@ -1066,7 +1066,7 @@ f.write('all,'+str(accuracy(preds_df.values))+','+str(fscore(preds_df.values))+'
 f.close()
 
 
-# In[53]:
+# In[ ]:
 
 
 H_train_loss = []
@@ -1085,7 +1085,7 @@ for i in range(max_epoch):
     S_train_loss.append(s_train_loss_[i][0])
 
 
-# In[54]:
+# In[ ]:
 
 
 import csv
@@ -1097,7 +1097,7 @@ writer.writerows(map(lambda h, t, a, k, kk, s: [h, t, a, k, kk, s], H_train_loss
 f.close()
 
 
-# In[55]:
+# In[ ]:
 
 
 import matplotlib.pyplot as plt

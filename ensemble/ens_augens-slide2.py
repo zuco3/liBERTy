@@ -22,7 +22,7 @@ parser.add_argument('-b', '--batch_size', type=int, default=64,
     help='size (defaualt 64) of batch for learning process')
 parser.add_argument('-a', '--article_type', type=int, default=0, choices=[0,1], 
     help='article type (0: dokujo_it=default, 1:dokujo_peachy')
-parser.add_argument('-t', '--transformflags', type=tp, default = ['n'], #default=['r','i','d','s'], 
+parser.add_argument('-t', '--transformflags', type=tp, default = 'n', #default='rids', 
     help='NLP-JP transformer (default n) r:synreplace i:randinsert d:randdelete s:randswap n:none')
 parser.add_argument('-r', '--synreplace_rate', type=int, default=1, 
     help='rate (default 1) of synreplace_rate par sentence as int for transformers.')
@@ -41,7 +41,7 @@ if args.jupyter == 'CMD':
     numof_validation = args.num_of_validation
     max_epoch = args.max_epoch
     batch_size = args.batch_size
-    transformflags = args.transformflags
+    transformflags = list(args.transformflags)
     synreplace_rate = args.synreplace_rate
     randinsert_rate = args.randinsert_rate
     randdelete_rate = args.randdelete_rate
@@ -52,7 +52,7 @@ else:
     numof_validation = 200
     max_epoch = 20
     batch_size = 64
-    transformflags = ['n'] #['r','i','d','s']
+    transformflags = list('n') #'rids'
     synreplace_rate = 1
     randinsert_rate = 3
     randdelete_rate = 0.15
@@ -600,7 +600,7 @@ train_loss_ = []
 test_loss_ = []
 
 
-# In[34]:
+# In[26]:
 
 
 from tqdm import tqdm
@@ -707,21 +707,21 @@ for epoch in range(max_epoch):
 #        print('epoch: ', epoch)
 
 
-# In[35]:
+# In[29]:
 
 
 test_loss_ = validation(model)
 # print('test: ', test_loss_)
 
 
-# In[36]:
+# In[30]:
 
 
 # b_input_mask.size(), b_input_ids.size(), labels.size()
 # outputs = self.model(torch.unsqueeze(token_tensor, 0))
 
 
-# In[37]:
+# In[31]:
 
 
 test_loss_[0]# all loss
@@ -731,13 +731,13 @@ test_loss_[1][0][0] # batch ikko niha shita
 test_loss_[1][0][0][0] # hoshii yatsu
 
 
-# In[38]:
+# In[32]:
 
 
 test_loss_[1][0][4][0]
 
 
-# In[39]:
+# In[33]:
 
 
 len(wv_labels)
@@ -745,7 +745,7 @@ len(wv_labels)
 
 # # HOUHOU 1
 
-# In[40]:
+# In[34]:
 
 
 methodone = []
@@ -763,7 +763,7 @@ for i in range(len(test_loss_[1])):
 
 # # HOUHOU2
 
-# In[41]:
+# In[35]:
 
 
 methodtwo = []
@@ -779,7 +779,7 @@ for i in range(len(test_loss_[1])):
         methodtwo.append(1)
 
 
-# In[42]:
+# In[36]:
 
 
 # nanka houhou 2 ga umaku ittenai kamo
@@ -787,7 +787,7 @@ for i in range(len(test_loss_[1])):
 len(methodtwo)
 
 
-# In[43]:
+# In[37]:
 
 
 one_df = pd.DataFrame(methodone, columns=['method1'])
@@ -797,7 +797,7 @@ accuracy_df = pd.concat([one_df, two_df, label_df], axis=1)
 accuracy_df.head(50)
 
 
-# In[44]:
+# In[38]:
 
 
 from sklearn.metrics import f1_score
@@ -808,7 +808,7 @@ def fscore(pdf):
     return f1_score(pdf, label_df.values[:len(pdf)])
 
 
-# In[51]:
+# In[39]:
 
 
 import csv
