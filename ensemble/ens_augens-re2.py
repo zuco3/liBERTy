@@ -9,6 +9,7 @@
 
 
 import argparse
+import wandb
 
 parser = argparse.ArgumentParser(description='liBERTy testbed')
 tp = lambda x:list(map(str, x.split(',')))
@@ -117,6 +118,19 @@ import torch
 # GPUが使えれば利用する設定
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print(device)
+
+
+# In[ ]:
+
+
+def torch_fix_seed(seed=24):
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+    torch.backends.cudnn.deterministic = True
+    torch.use_deterministic_algorithms = True
+torch_fix_seed()
 
 
 # # Data Augmentation kansuu
@@ -769,12 +783,14 @@ def train(epoch, model, optimizer, dataloader):
             loss.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
             optimizer.step()
+            lossi = loss.item()
             pbar.set_postfix(
                 OrderedDict(
-                    Loss=loss.item(),
+                    Loss=lossi
                 )
             )
-            train_loss += loss.item()
+            wandb.log({'epoch': epoch, 'loss': lossi})
+            train_loss += lossi
 #                print(output)
 #                print(output['logits'])
             alloutputs.append(output['logits'].to('cpu'))
@@ -798,13 +814,15 @@ def validation(model, dataloader):
                 loss = output.loss
                 preds = output.logits.argmax(axis=1)
                 alloutputs.append(output.logits.to('cpu').clone())
+                lossi = loss.item()
                 pbar.set_postfix(
                     OrderedDict(
-                        Loss=loss.item(),
+                        Loss=lossi,
                         Accuracy=torch.sum(preds == b_labels).item() / len(b_labels),
                         Len=len(alloutputs)
                     )
                 )
+                wandb.log({'epoch': epoch, 'loss': lossi})
                 if numof_validation < iteration:
 #                    print('validation quit')
                     break
@@ -839,76 +857,100 @@ s_train_loss = 0
 # In[37]:
 
 
+wandb.init(project="liBERTy-re2-h")
 model, optimizer = loadmodel()
 for epoch in range(max_epoch):
     h_train_ = train(epoch, model, optimizer,  h_train_dataloader)
     h_train_loss_.append(h_train_)
 #    if epoch%10 == 0:
 #        print('epoch: ', epoch)
+wandb.finish()
+wandb.init(project="liBERTy-re2-h-v")
 h_test_loss_ = validation(model, h_validation_dataloader)
+wandb.finish()
 
 
 # In[38]:
 
 
+wandb.init(project="liBERTy-re2-t")
 model, optimizer = loadmodel()
 for epoch in range(max_epoch):
     t_train_ = train(epoch, model, optimizer,  t_train_dataloader)
     t_train_loss_.append(t_train_)
 #    if epoch%10 == 0:
 #        print('epoch: ', epoch)
+wandb.finish()
+wandb.init(project="liBERTy-re2-t-v")
 t_test_loss_ = validation(model, t_validation_dataloader)
+wandb.finish()
 
 
-# In[ ]:
+# In[39]:
 
 
+wandb.init(project="liBERTy-re2-a")
 model, optimizer = loadmodel()
 for epoch in range(max_epoch):
     a_train_ = train(epoch, model, optimizer,  a_train_dataloader)
     a_train_loss_.append(a_train_)
 #    if epoch%10 == 0:
 #        print('epoch: ', epoch)
+wandb.finish()
+wandb.init(project="liBERTy-re2-a-v")
 a_test_loss_ = validation(model, a_validation_dataloader)
+wandb.finish()
 
 
-# In[ ]:
+# In[40]:
 
 
+wandb.init(project="liBERTy-re2-k")
 model, optimizer = loadmodel()
 for epoch in range(max_epoch):
     k_train_ = train(epoch, model, optimizer,  k_train_dataloader)
     k_train_loss_.append(k_train_)
 #    if epoch%10 == 0:
 #        print('epoch: ', epoch)
+wandb.finish()
+wandb.init(project="liBERTy-re2-k-v")
 k_test_loss_ = validation(model, k_validation_dataloader)
+wandb.finish()
 
 
-# In[ ]:
+# In[41]:
 
 
+wandb.init(project="liBERTy-re2-kk")
 model, optimizer = loadmodel()
 for epoch in range(max_epoch):
     kk_train_ = train(epoch, model, optimizer,  kk_train_dataloader)
     kk_train_loss_.append(kk_train_)
 #    if epoch%10 == 0:
 #        print('epoch: ', epoch)
+wandb.finish()
+wandb.init(project="liBERTy-re2-kk-v")
 kk_test_loss_ = validation(model, kk_validation_dataloader)
+wandb.finish()
 
 
-# In[ ]:
+# In[42]:
 
 
+wandb.init(project="liBERTy-re2-s")
 model, optimizer = loadmodel()
 for epoch in range(max_epoch):
     s_train_ = train(epoch, model, optimizer,  s_train_dataloader)
     s_train_loss_.append(s_train_)
 #    if epoch%10 == 0:
 #        print('epoch: ', epoch)
+wandb.finish()
+wandb.init(project="liBERTy-re2-s-v")
 s_test_loss_ = validation(model, s_validation_dataloader)
+wandb.finish()
 
 
-# In[ ]:
+# In[43]:
 
 
 sents = []
@@ -923,7 +965,7 @@ sents = pd.DataFrame(sents)
 
 # # type soroete X train test Y train test wo kaizan suru
 
-# In[ ]:
+# In[44]:
 
 
 h_pred_ = []
@@ -942,7 +984,7 @@ for i in range(len(h_test_loss_[1])):
     s_pred_.append(np.argmax(np.array(s_test_loss_[1][i])))
 
 
-# In[ ]:
+# In[45]:
 
 
 vlabel = []
@@ -951,7 +993,7 @@ for _,_,label in h_validation_dataloader:
     vlabel.append(copy.deepcopy(label.detach().numpy()))
 
 
-# In[ ]:
+# In[46]:
 
 
 h_pred_df = pd.DataFrame(h_pred_, columns=['h_pred_label'])
@@ -965,7 +1007,7 @@ accuracy_df = pd.concat([h_pred_df, t_pred_df, a_pred_df, k_pred_df, kk_pred_df,
 accuracy_df.head(5)
 
 
-# In[ ]:
+# In[47]:
 
 
 hpreds = h_pred_df.values
@@ -987,7 +1029,7 @@ for i in range(len(hpreds)):
     preds.append(pred)
 
 
-# In[ ]:
+# In[48]:
 
 
 preds_df = pd.DataFrame(preds, columns=['pred_label'])
@@ -998,7 +1040,7 @@ ensaccuracy_df = pd.concat([preds_df, label_df], axis=1)
 
 # # pred_label accuracy
 
-# In[ ]:
+# In[49]:
 
 
 cor = 0
@@ -1023,7 +1065,7 @@ for i in range(len(preds_df)):
 
 # # pred_label F1
 
-# In[ ]:
+# In[50]:
 
 
 '''
@@ -1035,7 +1077,7 @@ sp = rnum/spnum
 '''
 
 
-# In[ ]:
+# In[51]:
 
 
 from sklearn.metrics import f1_score
@@ -1046,7 +1088,7 @@ def fscore(pdf):
     return f1_score(pdf, label_df.values[:len(pdf)])
 
 
-# In[ ]:
+# In[52]:
 
 
 print('head', accuracy(hpreds), fscore(hpreds))
@@ -1068,7 +1110,7 @@ f.write('all,'+str(accuracy(preds_df.values))+','+str(fscore(preds_df.values))+'
 f.close()
 
 
-# In[ ]:
+# In[53]:
 
 
 H_train_loss = []
@@ -1087,7 +1129,7 @@ for i in range(max_epoch):
     S_train_loss.append(s_train_loss_[i][0])
 
 
-# In[ ]:
+# In[54]:
 
 
 import csv
@@ -1099,7 +1141,7 @@ writer.writerows(map(lambda h, t, a, k, kk, s: [h, t, a, k, kk, s], H_train_loss
 f.close()
 
 
-# In[ ]:
+# In[55]:
 
 
 import matplotlib.pyplot as plt

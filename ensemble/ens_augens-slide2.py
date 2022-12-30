@@ -9,6 +9,9 @@
 
 
 import argparse
+import wandb
+import warnings
+wandb.init(project="liBERTy")
 
 parser = argparse.ArgumentParser(description='liBERTy testbed')
 tp = lambda x:list(map(str, x.split(',')))
@@ -37,27 +40,28 @@ parser.add_argument('-f', '--jupyter', default='CMD',
 args = parser.parse_args()
 
 if args.jupyter == 'CMD':
-    numof_learn = args.num_of_learn
-    numof_validation = args.num_of_validation
-    max_epoch = args.max_epoch
-    batch_size = args.batch_size
+    wandb.config.num_of_learn = numof_learn = args.num_of_learn
+    wandb.config.num_of_validation = numof_validation = args.num_of_validation
+    wandb.config.max_epoch = max_epoch = args.max_epoch
+    wandb.config.batch_size = batch_size = args.batch_size
+    wandb.config.transformflags = args.transformflags
     transformflags = list(args.transformflags)
-    synreplace_rate = args.synreplace_rate
-    randinsert_rate = args.randinsert_rate
-    randdelete_rate = args.randdelete_rate
-    randswap_rate = args.randswap_rate
-    articletype = args.article_type
+    wandb.config.synreplace_rate = synreplace_rate = args.synreplace_rate
+    wandb.config.randinsert_rate = randinsert_rate = args.randinsert_rate
+    wandb.config.randdelete_rate = randdelete_rate = args.randdelete_rate
+    wandb.config.randswap_rate = randswap_rate = args.randswap_rate
+    wandb.config.article_type = articletype = args.article_type
 else:
-    numof_learn = 100
-    numof_validation = 200
-    max_epoch = 20
-    batch_size = 64
-    transformflags = list('n') #'rids'
-    synreplace_rate = 1
-    randinsert_rate = 3
-    randdelete_rate = 0.15
-    randswap_rate = 2   
-    articletype = 0
+    wandb.config.num_of_learn = numof_learn = 100
+    wandb.config.numof_validation = numof_validation = 200
+    wandb.config.max_epoch = max_epoch = 20
+    wandb.config.batch_size = batch_size = 64
+    wandb.config.transformflags = transformflags = list('n') #'rids'
+    wandb.config.synreplace_rate = synreplace_rate = 1
+    wandb.config.randinsert_rate = randinsert_rate = 3
+    wandb.config.randdelete_rate = randdelete_rate = 0.15
+    wandb.config.randswap_rate = randswap_rate = 2   
+    wandb.config.articletype = articletype = 0
 articlelabel = ['dokujo_it', 'dokujo_peachy']
 print("num_of_learn:",numof_learn," max_epoch:", max_epoch," num_of_batch:", batch_size,
       " articletype:", articlelabel[articletype])
@@ -115,16 +119,29 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 device
 
 
+# In[5]:
+
+
+def torch_fix_seed(seed=24):
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+    torch.backends.cudnn.deterministic = True
+    torch.use_deterministic_algorithms = True
+torch_fix_seed()
+
+
 # # Data Augmentation kansuu
 
-# In[5]:
+# In[6]:
 
 
 from transformers import RobertaForMaskedLM
 robertamodel = RobertaForMaskedLM.from_pretrained("rinna/japanese-roberta-base")
 
 
-# In[6]:
+# In[7]:
 
 
 # synreplace - replace kasho kosuu
@@ -219,7 +236,7 @@ class randswap(object):
 #     
 # 以下、ファイルを読み込んで、必要な部分を抽出
 
-# In[7]:
+# In[8]:
 
 
 tsv_fname = "all_text.tsv" 
@@ -254,7 +271,7 @@ def read_para(f):
     return p [:-1]
 
 
-# In[8]:
+# In[9]:
 
 
 if articletype == 0:
@@ -303,7 +320,7 @@ for i in range(2):
 
 # pandasでデータを読み込み
 
-# In[9]:
+# In[10]:
 
 
 import pandas as pd
@@ -318,7 +335,7 @@ df = pd.read_csv("all_text.tsv",
 
 # //文章データをsentences、ラベルデータを labelsに保存、以降この2変数だけを利用
 
-# In[10]:
+# In[11]:
 
 
 mn = df.media_name.values
@@ -327,7 +344,7 @@ titles = df.title.values
 sentences = df.sentence.values
 
 
-# In[11]:
+# In[12]:
 
 
 tagger = MeCab.Tagger("-Owakati")
@@ -346,7 +363,7 @@ def make_wakati(sentence):
     return wakati
 
 
-# In[12]:
+# In[13]:
 
 
 wakati_sentences = []
@@ -355,7 +372,7 @@ for i in range(len(sentences)):
     wakati_sentences.append(make_wakati(sentences[i]))
 
 
-# In[13]:
+# In[14]:
 
 
 wcount = 256
@@ -403,7 +420,7 @@ for i in enumerate(wakati_sentences):
         sectionlist.append(1)
 
 
-# In[14]:
+# In[15]:
 
 
 #print(ssentences[0])
@@ -415,7 +432,7 @@ for i in enumerate(wakati_sentences):
 
 # # テスト実行
 
-# In[15]:
+# In[16]:
 
 
 w_input_ids = []
@@ -440,7 +457,7 @@ for sent in ssentences:
     w_attention_masks.append(p_attention_masks)
 
 
-# In[16]:
+# In[17]:
 
 
 # nagasa soroeru yo - id
@@ -453,7 +470,7 @@ for i in range(len(w_input_ids)):
             w_input_ids[i].append(pad)
 
 
-# In[17]:
+# In[18]:
 
 
 # nagasa soroeru yo - attention
@@ -465,14 +482,14 @@ for i in range(len(w_attention_masks)):
             w_attention_masks[i].append(pad)
 
 
-# In[18]:
+# In[19]:
 
 
 #len(w_input_ids)
 #len(sectionlist)
 
 
-# In[19]:
+# In[20]:
 
 
 # 80%地点のIDを取得
@@ -483,7 +500,7 @@ val_size = num_dataset - train_size
 #print('検証データ数:{}'.format(val_size))
 
 
-# In[20]:
+# In[21]:
 
 
 from torch.utils.data import Dataset
@@ -559,7 +576,7 @@ validation_dataloader = DataLoader(
         )
 
 
-# In[21]:
+# In[22]:
 
 
 #a = wt_input_ids[0][0].detach().numpy()
@@ -567,7 +584,7 @@ validation_dataloader = DataLoader(
 #a[0]
 
 
-# In[22]:
+# In[23]:
 
 
 from transformers import BertForSequenceClassification,AdamW,BertConfig
@@ -581,20 +598,20 @@ model = BertForSequenceClassification.from_pretrained(
 ).to(device)
 
 
-# In[23]:
+# In[24]:
 
 
 # 最適化手法の設定
 optimizer = AdamW(model.parameters(), lr=2e-5)
 
 
-# In[24]:
+# In[25]:
 
 
 #test = next(iter(train_dataloader))
 
 
-# In[25]:
+# In[26]:
 
 
 # 学習の実行
@@ -602,7 +619,7 @@ train_loss_ = []
 test_loss_ = []
 
 
-# In[26]:
+# In[27]:
 
 
 from tqdm import tqdm
@@ -637,12 +654,14 @@ def train(epoch, model):
                     loss.backward()
                     torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
                     optimizer.step()
+                    lossi = loss.item()
                     pbar.set_postfix(
                         OrderedDict(
-                            Loss=loss.item(),
+                            Loss=lossi,
                         )
-                    )                    
-                    train_loss += loss.item()
+                    )
+                    wandb.log({'epoch': epoch, 'loss': lossi})
+                    train_loss += lossi
 #                    print(output)
 #                    print(output['logits'])
                     outputs.append(output['logits'].to('cpu'))
@@ -672,13 +691,15 @@ def validation(model):
                                      attention_mask=m_input_mask, 
                                      labels=m_label)
                         loss = output.loss
+                        lossi = loss.item()
                         preds = output.logits.argmax(axis=1)
                         pbar.set_postfix(
                             OrderedDict(
-                                Loss=loss.item(),
+                                Loss=lossi,
                                 Accuracy=torch.sum(preds == b_labels).item() / len(b_labels),
                             )
                         )
+                        wandb.log({'epoch': epoch, 'loss': lossi})
                         outputs.append(output.logits.to('cpu').clone())
                     alloutputs.append(outputs)
                 if numof_validation < iteration:
@@ -686,7 +707,7 @@ def validation(model):
     return loss, alloutputs
 
 
-# In[27]:
+# In[28]:
 
 
 # nagasa soroeru yo
@@ -699,55 +720,43 @@ for i in range(len(w_input_ids)):
             w_input_ids[i].append(pad)
 
 
-# In[28]:
+# In[29]:
 
 
+wandb.init(project="liBERTy-slide2")
 for epoch in range(max_epoch):
     train_ = train(epoch, model)
     train_loss_.append(train_)
 #    if epoch%10 == 0:
 #        print('epoch: ', epoch)
-
-
-# In[29]:
-
-
-test_loss_ = validation(model)
-# print('test: ', test_loss_)
+wandb.finish()
 
 
 # In[30]:
+
+
+wandb.init(project="liBERTy-slide2-v")
+test_loss_ = validation(model)
+# print('test: ', test_loss_)
+wandb.finish()
+
+
+# In[31]:
 
 
 # b_input_mask.size(), b_input_ids.size(), labels.size()
 # outputs = self.model(torch.unsqueeze(token_tensor, 0))
 
 
-# In[31]:
+# In[34]:
 
 
-test_loss_[0]# all loss
-test_loss_[1] # 1690
-test_loss_[1][0] # burokkusuu
-test_loss_[1][0][0] # batch ikko niha shita
-test_loss_[1][0][0][0] # hoshii yatsu
-
-
-# In[32]:
-
-
-test_loss_[1][0][4][0]
-
-
-# In[33]:
-
-
-len(wv_labels)
+#len(wv_labels)
 
 
 # # HOUHOU 1
 
-# In[34]:
+# In[35]:
 
 
 methodone = []
@@ -765,7 +774,7 @@ for i in range(len(test_loss_[1])):
 
 # # HOUHOU2
 
-# In[35]:
+# In[36]:
 
 
 methodtwo = []
@@ -781,7 +790,7 @@ for i in range(len(test_loss_[1])):
         methodtwo.append(1)
 
 
-# In[36]:
+# In[37]:
 
 
 # nanka houhou 2 ga umaku ittenai kamo
@@ -789,7 +798,7 @@ for i in range(len(test_loss_[1])):
 len(methodtwo)
 
 
-# In[37]:
+# In[38]:
 
 
 one_df = pd.DataFrame(methodone, columns=['method1'])
@@ -799,7 +808,7 @@ accuracy_df = pd.concat([one_df, two_df, label_df], axis=1)
 accuracy_df.head(50)
 
 
-# In[38]:
+# In[39]:
 
 
 from sklearn.metrics import f1_score
@@ -810,11 +819,11 @@ def fscore(pdf):
     return f1_score(pdf, label_df.values[:len(pdf)])
 
 
-# In[39]:
+# In[40]:
 
 
 import csv
-f = open('ens_augens-re2-rep-'+filestr+'.csv', 'w')
+f = open('ens_augens-slide2-rep-'+filestr+'.csv', 'w')
 onepreds = one_df.values
 twopreds = two_df.values
 f.write('methodone: acc:'+str(accuracy(onepreds))+', f1:'+str(fscore(onepreds))+'\n')
