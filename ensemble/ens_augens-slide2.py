@@ -65,7 +65,9 @@ else:
 articlelabel = ['dokujo_it', 'dokujo_peachy']
 print("num_of_learn:",numof_learn," max_epoch:", max_epoch," num_of_batch:", batch_size,
       " articletype:", articlelabel[articletype])
-filestr = "l:"+str(numof_learn)+"_e:"+str(max_epoch)+"_b:"+str(batch_size)+"_t:"+''.join(transformflags)+    "_r:"+str(synreplace_rate)+'_i:'+str(randinsert_rate)+'_d:'+str(randdelete_rate)+'_s:'+str(randswap_rate)+    "_a:"+articlelabel[articletype]
+filestr = "l:"+str(numof_learn)+"_e:"+str(max_epoch)+"_b:"+str(batch_size)+"_t:"+''.join(transformflags)+\
+    "_r:"+str(synreplace_rate)+'_i:'+str(randinsert_rate)+'_d:'+str(randdelete_rate)+'_s:'+str(randswap_rate)+\
+    "_a:"+articlelabel[articletype]
 print(filestr)
 
 
@@ -718,7 +720,7 @@ for i in range(len(w_input_ids)):
             w_input_ids[i].append(pad)
 
 
-# In[ ]:
+# In[29]:
 
 
 wandb.init(project="liBERTy-slide2")
@@ -730,7 +732,7 @@ for epoch in range(max_epoch):
 wandb.finish()
 
 
-# In[ ]:
+# In[30]:
 
 
 wandb.init(project="liBERTy-slide2-v")
@@ -739,38 +741,22 @@ test_loss_ = validation(model)
 wandb.finish()
 
 
-# In[ ]:
+# In[31]:
 
 
 # b_input_mask.size(), b_input_ids.size(), labels.size()
 # outputs = self.model(torch.unsqueeze(token_tensor, 0))
 
 
-# In[ ]:
+# In[34]:
 
 
-test_loss_[0]# all loss
-test_loss_[1] # 1690
-test_loss_[1][0] # burokkusuu
-test_loss_[1][0][0] # batch ikko niha shita
-test_loss_[1][0][0][0] # hoshii yatsu
-
-
-# In[ ]:
-
-
-test_loss_[1][0][4][0]
-
-
-# In[ ]:
-
-
-len(wv_labels)
+#len(wv_labels)
 
 
 # # HOUHOU 1
 
-# In[ ]:
+# In[35]:
 
 
 methodone = []
@@ -788,7 +774,7 @@ for i in range(len(test_loss_[1])):
 
 # # HOUHOU2
 
-# In[ ]:
+# In[36]:
 
 
 methodtwo = []
@@ -804,7 +790,7 @@ for i in range(len(test_loss_[1])):
         methodtwo.append(1)
 
 
-# In[ ]:
+# In[37]:
 
 
 # nanka houhou 2 ga umaku ittenai kamo
@@ -812,7 +798,7 @@ for i in range(len(test_loss_[1])):
 len(methodtwo)
 
 
-# In[ ]:
+# In[38]:
 
 
 one_df = pd.DataFrame(methodone, columns=['method1'])
@@ -822,7 +808,7 @@ accuracy_df = pd.concat([one_df, two_df, label_df], axis=1)
 accuracy_df.head(50)
 
 
-# In[ ]:
+# In[39]:
 
 
 from sklearn.metrics import f1_score
@@ -833,7 +819,7 @@ def fscore(pdf):
     return f1_score(pdf, label_df.values[:len(pdf)])
 
 
-# In[ ]:
+# In[40]:
 
 
 import csv
