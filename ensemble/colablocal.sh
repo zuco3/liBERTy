@@ -14,7 +14,7 @@ jupyter-notebook \
 	--no-browser \
 	--allow-root \
 	--ServerApp.password='' \
-	--ServerApp.ip=0.0.0.0 \
+	--NotebookApp.ip=0.0.0.0 \
 	--ServerApp.port=8888 \
 	--ServerApp.allow_origin='https://colab.research.google.com' \
 	--ServerApp.port_retries=0 \
