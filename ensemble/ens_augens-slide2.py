@@ -10,11 +10,9 @@
 
 import argparse
 import wandb
-import warnings
-wandb.init(project="liBERTy")
 
 parser = argparse.ArgumentParser(description='liBERTy testbed')
-tp = lambda x:list(map(str, x.split(',')))
+#tp = lambda x:list(map(str, x.split(',')))
 parser.add_argument('-l', '--num_of_learn', type=int, default=100,
     help='number (default 100) of learn, which determins the rate of dataset for the use of learning.')
 parser.add_argument('-v', '--num_of_validation', type=int, default=100,
@@ -25,7 +23,7 @@ parser.add_argument('-b', '--batch_size', type=int, default=64,
     help='size (defaualt 64) of batch for learning process')
 parser.add_argument('-a', '--article_type', type=int, default=0, choices=[0,1], 
     help='article type (0: dokujo_it=default, 1:dokujo_peachy')
-parser.add_argument('-t', '--transformflags', type=tp, default = 'n', #default='rids', 
+parser.add_argument('-t', '--transformflags', default = 'n', #default='rids', 
     help='NLP-JP transformer (default n) r:synreplace i:randinsert d:randdelete s:randswap n:none')
 parser.add_argument('-r', '--synreplace_rate', type=int, default=1, 
     help='rate (default 1) of synreplace_rate par sentence as int for transformers.')
@@ -40,35 +38,35 @@ parser.add_argument('-f', '--jupyter', default='CMD',
 args = parser.parse_args()
 
 if args.jupyter == 'CMD':
-    wandb.config.num_of_learn = numof_learn = args.num_of_learn
-    wandb.config.num_of_validation = numof_validation = args.num_of_validation
-    wandb.config.max_epoch = max_epoch = args.max_epoch
-    wandb.config.batch_size = batch_size = args.batch_size
-    wandb.config.transformflags = args.transformflags
-    transformflags = list(args.transformflags)
-    wandb.config.synreplace_rate = synreplace_rate = args.synreplace_rate
-    wandb.config.randinsert_rate = randinsert_rate = args.randinsert_rate
-    wandb.config.randdelete_rate = randdelete_rate = args.randdelete_rate
-    wandb.config.randswap_rate = randswap_rate = args.randswap_rate
-    wandb.config.article_type = articletype = args.article_type
+    numof_learn = args.num_of_learn
+    numof_validation = args.num_of_validation
+    max_epoch = args.max_epoch
+    batch_size = args.batch_size
+    transformflags = args.transformflags
+    synreplace_rate = args.synreplace_rate
+    randinsert_rate = args.randinsert_rate
+    randdelete_rate = args.randdelete_rate
+    randswap_rate = args.randswap_rate
+    articletype = args.article_type
 else:
-    wandb.config.num_of_learn = numof_learn = 100
-    wandb.config.numof_validation = numof_validation = 200
-    wandb.config.max_epoch = max_epoch = 20
-    wandb.config.batch_size = batch_size = 64
-    wandb.config.transformflags = transformflags = list('n') #'rids'
-    wandb.config.synreplace_rate = synreplace_rate = 1
-    wandb.config.randinsert_rate = randinsert_rate = 3
-    wandb.config.randdelete_rate = randdelete_rate = 0.15
-    wandb.config.randswap_rate = randswap_rate = 2   
-    wandb.config.articletype = articletype = 0
+    numof_learn = 100
+    numof_validation = 200
+    max_epoch = 20
+    batch_size = 64
+    transformflags = list('n') #'rids'
+    synreplace_rate = 1
+    randinsert_rate = 3
+    randdelete_rate = 0.15
+    randswap_rate = 2   
+    articletype = 0
 articlelabel = ['dokujo_it', 'dokujo_peachy']
 print("num_of_learn:",numof_learn," max_epoch:", max_epoch," num_of_batch:", batch_size,
       " articletype:", articlelabel[articletype])
-filestr = "l:"+str(numof_learn)+"_e:"+str(max_epoch)+"_b:"+str(batch_size)+"_t:"+''.join(transformflags)+\
+filestr = "l:"+str(numof_learn)+"_e:"+str(max_epoch)+"_b:"+str(batch_size)+"_t:"+transformflags+\
     "_r:"+str(synreplace_rate)+'_i:'+str(randinsert_rate)+'_d:'+str(randdelete_rate)+'_s:'+str(randswap_rate)+\
     "_a:"+articlelabel[articletype]
 print(filestr)
+transformflags = list(transformflags)
 
 
 # In[2]:
@@ -511,19 +509,20 @@ from transformers import RobertaForMaskedLM
 import random
 
 # データローダーの作成
+print("transfomers:", transformflags)
 transformmethods = []
 if 'r' in transformflags:
     transformmethods.append(synreplace(synreplace_rate))
-#    print("synreplace")
+    print("synreplace")
 if 'i' in transformflags:
     transformmethods.append(randinsert(randinsert_rate))
-#    print("randinsert")
+    print("randinsert")
 if 'd' in transformflags:
     transformmethods.append(randdelete(randdelete_rate))
-#    print("randdelete")
+    print("randdelete")
 if 's' in transformflags:
     transformmethods.append(randswap(randswap_rate))
-#    print("randswap")
+    print("randswap")
 data_transform = transforms.Compose(transformmethods)
 
 class MyDatasets(torch.utils.data.Dataset):
