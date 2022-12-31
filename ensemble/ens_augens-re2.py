@@ -12,7 +12,7 @@ import argparse
 import wandb
 
 parser = argparse.ArgumentParser(description='liBERTy testbed')
-tp = lambda x:list(map(str, x.split(',')))
+#tp = lambda x:list(map(str, x.split(',')))
 parser.add_argument('-l', '--num_of_learn', type=int, default=100,
     help='number (default 100) of learn, which determins the rate of dataset for the use of learning.')
 parser.add_argument('-v', '--num_of_validation', type=int, default=100,
@@ -23,7 +23,7 @@ parser.add_argument('-b', '--batch_size', type=int, default=64,
     help='size (defaualt 64) of batch for learning process')
 parser.add_argument('-a', '--article_type', type=int, default=0, choices=[0,1], 
     help='article type (0: dokujo_it=default, 1:dokujo_peachy')
-parser.add_argument('-t', '--transformflags', type=tp, default = 'n', #default='rids', 
+parser.add_argument('-t', '--transformflags', default = 'n', #default='rids', 
     help='NLP-JP transformer (default n) r:synreplace i:randinsert d:randdelete s:randswap n:none')
 parser.add_argument('-r', '--synreplace_rate', type=int, default=1, 
     help='rate (default 1) of synreplace_rate par sentence as int for transformers.')
@@ -62,10 +62,11 @@ else:
 articlelabel = ['dokujo_it', 'dokujo_peachy']
 print("num_of_learn:",numof_learn," max_epoch:", max_epoch," num_of_batch:", batch_size,
       " articletype:", articlelabel[articletype])
-filestr = "l:"+str(numof_learn)+"_e:"+str(max_epoch)+"_b:"+str(batch_size)+"_t:"+''.join(transformflags)+\
+filestr = "l:"+str(numof_learn)+"_e:"+str(max_epoch)+"_b:"+str(batch_size)+"_t:"+transformflags+\
     "_r:"+str(synreplace_rate)+'_i:'+str(randinsert_rate)+'_d:'+str(randdelete_rate)+'_s:'+str(randswap_rate)+\
     "_a:"+articlelabel[articletype]
 print(filestr)
+transformflags = list(transformflags)
 
 
 # In[2]:
@@ -644,19 +645,20 @@ val_size = len(hdataset) - train_size
 
 
 # データローダーの作成
+print("transfomers:", transformflags)
 transformmethods = []
 if 'r' in transformflags:
     transformmethods.append(synreplace(synreplace_rate))
     print("synreplace")
 if 'i' in transformflags:
     transformmethods.append(randinsert(randinsert_rate))
-#    print("randinsert")
+    print("randinsert")
 if 'd' in transformflags:
     transformmethods.append(randdelete(randdelete_rate))
-#    print("randdelete")
+    print("randdelete")
 if 's' in transformflags:
     transformmethods.append(randswap(randswap_rate))
-#    print("randswap")
+    print("randswap")
 data_transform = transforms.Compose(transformmethods)
 
 class MySubset(torch.utils.data.Dataset):

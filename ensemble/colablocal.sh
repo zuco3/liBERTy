@@ -16,7 +16,7 @@ jupyter-notebook \
 	--ServerApp.password='' \
 	--NotebookApp.ip=0.0.0.0 \
 	--ServerApp.port=8888 \
-	--ServerApp.allow_origin='https://colab.research.google.com' \
+	--NotebookApp.allow_origin='https://colab.research.google.com' \
 	--ServerApp.port_retries=0 \
 	--ServerApp.disable_check_xsrf=True \
 	--NotebookApp.token='' \
