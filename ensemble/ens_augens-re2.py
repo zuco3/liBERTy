@@ -15,7 +15,7 @@ parser = argparse.ArgumentParser(description='liBERTy testbed')
 #tp = lambda x:list(map(str, x.split(',')))
 parser.add_argument('-l', '--num_of_learn', type=int, default=100,
     help='number (default 100) of learn, which determins the rate of dataset for the use of learning.')
-parser.add_argument('-v', '--num_of_validation', type=int, default=100,
+parser.add_argument('-v', '--num_of_validation', type=int, default=200,
     help='number of validation to shorten the validation time.')
 parser.add_argument('-e', '--max_epoch', type=int, default=20, 
     help='number (default 20) of epoch to be executed for learning loop')
@@ -53,7 +53,7 @@ else:
     numof_validation = 200
     max_epoch = 20
     batch_size = 64
-    transformflags = list('n') #'rids'
+    transformflags = 'n' #'rids'
     synreplace_rate = 1
     randinsert_rate = 3
     randdelete_rate = 0.15
@@ -121,7 +121,7 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print(device)
 
 
-# In[ ]:
+# In[5]:
 
 
 def torch_fix_seed(seed=24):
@@ -136,14 +136,14 @@ torch_fix_seed()
 
 # # Data Augmentation kansuu
 
-# In[5]:
+# In[6]:
 
 
 from transformers import RobertaForMaskedLM
 robertamodel = RobertaForMaskedLM.from_pretrained("rinna/japanese-roberta-base")
 
 
-# In[6]:
+# In[7]:
 
 
 # synreplace - replace kasho kosuu
@@ -156,10 +156,7 @@ class synreplace(object):
         self.num = num
     def __call__(self, textlist):
         # textlist: honbun no list
-        if len(torch.where(textlist == 3)[0]):
-            textlen = torch.where(textlist == 3)[0][0]
-        else:
-            textlen = len(textlist)
+        textlen = torch.where(textlist == 3)[0][0]
         for n in range(self.num):
             # chikan shiro
             masked_idx = random.randint(2, textlen-1)
@@ -169,7 +166,7 @@ class synreplace(object):
             # get the top 10 predictions of the masked token
             self.model = robertamodel.eval()
             with torch.no_grad():
-                outputs = robertamodel(torch.unsqueeze(token_tensor, 0))
+                outputs = self.model(torch.unsqueeze(token_tensor, 0))
                 predictions = outputs[0][0, masked_idx].topk(1)
             for i, index_t in enumerate(predictions.indices):
                 index = index_t.item()
@@ -185,7 +182,7 @@ class randinsert(object):
             i = random.randint(1,len(textlist)-1)
 #            print('len: ', len(textlist))
 #            print(i)
-            while textlist[i] == 3:
+            while textlist[i] == 3 or  textlist[i] == 9:
                 i = random.randint(1,len(textlist)-1)
 #                print(i)
             textlist = torch.cat([textlist[0:i], torch.tensor([insword]), textlist[i:-1]])
@@ -197,7 +194,7 @@ class randdelete(object):
     def __call__(self, textlist):
 #        print(textlist.shape)
         for i in range(3,len(textlist)-1):
-            if textlist[i] == 3:
+            if textlist[i] == 3 or  textlist[i] == 9:
                 continue
             r = random.uniform(0, 1)
             if r < self.num:
@@ -216,12 +213,12 @@ class randswap(object):
             while self.num > counter:
                 box = 0
                 random_idx_1 = random.randint(1, len(textlist)-1)
-                while textlist[random_idx_1] == 3:
+                while textlist[random_idx_1] == 3 or textlist[random_idx_1] == 9:
                     random_idx_1 = random.randint(0, len(textlist)-1)
                 random_idx_2 = random.randint(1, len(textlist)-1)
-                while random_idx_1 == random_idx_2 or textlist[random_idx_2] == 3:
+                while random_idx_1 == random_idx_2 or textlist[random_idx_2] == 3 or textlist[random_idx_1] == 9:
                     random_idx_2 = random.randint(0, len(textlist)-1)
-#                    print(random_idx_1, random_idx_2)
+                    # print(random_idx_1, random_idx_2)
                 box = textlist[random_idx_1]
                 textlist[random_idx_1] = textlist[random_idx_2]
                 textlist[random_idx_2] = box
@@ -241,7 +238,7 @@ class randswap(object):
 #     
 # 以下、ファイルを読み込んで、必要な部分を抽出
 
-# In[7]:
+# In[8]:
 
 
 #処理をした結果を保存するファイル名 
@@ -276,7 +273,7 @@ def read_para(f):
     return p [:-1]
 
 
-# In[8]:
+# In[9]:
 
 
 if articletype == 0:
@@ -325,7 +322,7 @@ for i in range(2):
 
 # pandasでデータを読み込み
 
-# In[9]:
+# In[10]:
 
 
 import pandas as pd
@@ -347,7 +344,7 @@ elif articletype == 1:
 
 # //文章データをsentences、ラベルデータを labelsに保存、以降この2変数だけを利用
 
-# In[10]:
+# In[11]:
 
 
 mn = df.media_name.values
@@ -357,13 +354,13 @@ sentences = df.sentence.values
 summaries = df_.summaries.values
 
 
-# In[11]:
+# In[12]:
 
 
 #print("len of summaries:",len(summaries))
 
 
-# In[12]:
+# In[13]:
 
 
 tagger = MeCab.Tagger("-Owakati")
@@ -382,7 +379,7 @@ def make_wakati(sentence):
     return wakati
 
 
-# In[13]:
+# In[14]:
 
 
 wakati_sentences = []
@@ -391,7 +388,7 @@ for i in range(len(sentences)):
     wakati_sentences.append(make_wakati(sentences[i]))
 
 
-# In[14]:
+# In[15]:
 
 
 wcount = 256
@@ -429,44 +426,44 @@ for i in enumerate(wakati_sentences):
     t_sentences.append(sentences[i[0]][-tn-20:-20])
 
 
-# In[15]:
+# In[16]:
 
 
 #print(h_sentences[0])
 
 
-# In[16]:
+# In[17]:
 
 
 hsentences = np.array(h_sentences)
 tsentences = np.array(t_sentences)
 
 
-# In[17]:
+# In[18]:
 
 
 ssentences = np.array(summaries)
 
 
-# In[18]:
+# In[19]:
 
 
 #print(ssentences)
 
 
-# In[19]:
+# In[20]:
 
 
 #print(np.array(ssentences).shape)
 
 
-# In[20]:
+# In[21]:
 
 
 #print(tsentences)
 
 
-# In[21]:
+# In[22]:
 
 
 emp = []
@@ -492,13 +489,13 @@ for i in enumerate(sentences):
         kksentences[i[0]] = a[:wcount]
 
 
-# In[22]:
+# In[23]:
 
 
 #print(ksentences[2])
 
 
-# In[23]:
+# In[24]:
 
 
 #print(kksentences[2])
@@ -510,7 +507,7 @@ for i in enumerate(sentences):
 
 # # テスト実行
 
-# In[24]:
+# In[25]:
 
 
 # 最大単語数の確認
@@ -531,7 +528,7 @@ for sent in tsentences:
 #print('上記の最大単語数にSpecial token（[CLS], [SEP]）の+2をした値が最大単語数')
 
 
-# In[25]:
+# In[26]:
 
 
 def dicttoken(sentence):
@@ -552,7 +549,7 @@ def dicttoken(sentence):
     return ids, masks
 
 
-# In[26]:
+# In[27]:
 
 
 h_input_ids, h_attention_masks = dicttoken(hsentences)
@@ -563,7 +560,7 @@ kk_input_ids, kk_attention_masks = dicttoken(kksentences)
 s_input_ids, s_attention_masks = dicttoken(ssentences)
 
 
-# In[27]:
+# In[28]:
 
 
 # リストに入ったtensorを縦方向（dim=0）へ結合
@@ -584,7 +581,7 @@ s_attention_masks = torch.cat(s_attention_masks, dim=0)
 labels = torch.tensor(labels)
 
 
-# In[28]:
+# In[29]:
 
 
 # 確認
@@ -604,7 +601,7 @@ print(ssentences.size)
 '''
 
 
-# In[29]:
+# In[30]:
 
 
 from torch.utils.data import TensorDataset, random_split
@@ -621,13 +618,13 @@ kkdataset = TensorDataset(kk_input_ids, kk_attention_masks, labels)
 sdataset = TensorDataset(s_input_ids, s_attention_masks, labels)
 
 
-# In[30]:
+# In[31]:
 
 
 #type(hdataset[0][0])
 
 
-# In[31]:
+# In[32]:
 
 
 num_dataset = len(hdataset)
@@ -641,7 +638,7 @@ val_size = len(hdataset) - train_size
 #print('検証データ数:{}'.format(val_size))
 
 
-# In[32]:
+# In[33]:
 
 
 # データローダーの作成
@@ -701,7 +698,7 @@ s_train_dataset = MySubset(sdataset, indices[:train_size], data_transform)
 s_val_dataset = MySubset(sdataset, indices[train_size:])
 
 
-# In[33]:
+# In[34]:
 
 
 # 訓練データローダー
@@ -740,7 +737,7 @@ s_validation_dataloader = DataLoader(
             s_val_dataset, batch_size = 1, shuffle = False, num_workers = 8)
 
 
-# In[34]:
+# In[35]:
 
 
 from transformers import BertForSequenceClassification,AdamW,BertConfig
@@ -758,7 +755,7 @@ def loadmodel():
     return model, optimizer
 
 
-# In[35]:
+# In[36]:
 
 
 from tqdm import tqdm
@@ -831,7 +828,7 @@ def validation(model, dataloader):
     return loss, alloutputs
 
 
-# In[36]:
+# In[37]:
 
 
 # 学習の実行
@@ -856,7 +853,7 @@ kk_train_loss = 0
 s_train_loss = 0
 
 
-# In[37]:
+# In[38]:
 
 
 wandb.init(project="liBERTy-re2-h")
@@ -872,7 +869,7 @@ h_test_loss_ = validation(model, h_validation_dataloader)
 wandb.finish()
 
 
-# In[38]:
+# In[39]:
 
 
 wandb.init(project="liBERTy-re2-t")
@@ -888,7 +885,7 @@ t_test_loss_ = validation(model, t_validation_dataloader)
 wandb.finish()
 
 
-# In[39]:
+# In[40]:
 
 
 wandb.init(project="liBERTy-re2-a")
@@ -904,7 +901,7 @@ a_test_loss_ = validation(model, a_validation_dataloader)
 wandb.finish()
 
 
-# In[40]:
+# In[41]:
 
 
 wandb.init(project="liBERTy-re2-k")
@@ -920,7 +917,7 @@ k_test_loss_ = validation(model, k_validation_dataloader)
 wandb.finish()
 
 
-# In[41]:
+# In[42]:
 
 
 wandb.init(project="liBERTy-re2-kk")
@@ -936,7 +933,7 @@ kk_test_loss_ = validation(model, kk_validation_dataloader)
 wandb.finish()
 
 
-# In[42]:
+# In[43]:
 
 
 wandb.init(project="liBERTy-re2-s")
@@ -952,7 +949,7 @@ s_test_loss_ = validation(model, s_validation_dataloader)
 wandb.finish()
 
 
-# In[43]:
+# In[44]:
 
 
 sents = []
@@ -967,7 +964,7 @@ sents = pd.DataFrame(sents)
 
 # # type soroete X train test Y train test wo kaizan suru
 
-# In[44]:
+# In[45]:
 
 
 h_pred_ = []
@@ -986,7 +983,7 @@ for i in range(len(h_test_loss_[1])):
     s_pred_.append(np.argmax(np.array(s_test_loss_[1][i])))
 
 
-# In[45]:
+# In[46]:
 
 
 vlabel = []
@@ -995,7 +992,7 @@ for _,_,label in h_validation_dataloader:
     vlabel.append(copy.deepcopy(label.detach().numpy()))
 
 
-# In[46]:
+# In[47]:
 
 
 h_pred_df = pd.DataFrame(h_pred_, columns=['h_pred_label'])
@@ -1009,7 +1006,7 @@ accuracy_df = pd.concat([h_pred_df, t_pred_df, a_pred_df, k_pred_df, kk_pred_df,
 accuracy_df.head(5)
 
 
-# In[47]:
+# In[48]:
 
 
 hpreds = h_pred_df.values
@@ -1031,7 +1028,7 @@ for i in range(len(hpreds)):
     preds.append(pred)
 
 
-# In[48]:
+# In[49]:
 
 
 preds_df = pd.DataFrame(preds, columns=['pred_label'])
@@ -1042,7 +1039,7 @@ ensaccuracy_df = pd.concat([preds_df, label_df], axis=1)
 
 # # pred_label accuracy
 
-# In[49]:
+# In[50]:
 
 
 cor = 0
@@ -1067,7 +1064,7 @@ for i in range(len(preds_df)):
 
 # # pred_label F1
 
-# In[50]:
+# In[51]:
 
 
 '''
@@ -1079,7 +1076,7 @@ sp = rnum/spnum
 '''
 
 
-# In[51]:
+# In[52]:
 
 
 from sklearn.metrics import f1_score
@@ -1090,7 +1087,7 @@ def fscore(pdf):
     return f1_score(pdf, label_df.values[:len(pdf)])
 
 
-# In[52]:
+# In[53]:
 
 
 print('head', accuracy(hpreds), fscore(hpreds))
@@ -1112,7 +1109,7 @@ f.write('all,'+str(accuracy(preds_df.values))+','+str(fscore(preds_df.values))+'
 f.close()
 
 
-# In[53]:
+# In[54]:
 
 
 H_train_loss = []
@@ -1131,7 +1128,7 @@ for i in range(max_epoch):
     S_train_loss.append(s_train_loss_[i][0])
 
 
-# In[54]:
+# In[55]:
 
 
 import csv
@@ -1143,7 +1140,7 @@ writer.writerows(map(lambda h, t, a, k, kk, s: [h, t, a, k, kk, s], H_train_loss
 f.close()
 
 
-# In[55]:
+# In[56]:
 
 
 import matplotlib.pyplot as plt

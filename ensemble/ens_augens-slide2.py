@@ -15,7 +15,7 @@ parser = argparse.ArgumentParser(description='liBERTy testbed')
 #tp = lambda x:list(map(str, x.split(',')))
 parser.add_argument('-l', '--num_of_learn', type=int, default=100,
     help='number (default 100) of learn, which determins the rate of dataset for the use of learning.')
-parser.add_argument('-v', '--num_of_validation', type=int, default=100,
+parser.add_argument('-v', '--num_of_validation', type=int, default=200,
     help='number of validation to shorten the validation time.')
 parser.add_argument('-e', '--max_epoch', type=int, default=20, 
     help='number (default 20) of epoch to be executed for learning loop')
@@ -53,12 +53,13 @@ else:
     numof_validation = 200
     max_epoch = 20
     batch_size = 64
-    transformflags = list('n') #'rids'
+    transformflags = 'n' #'rids'
     synreplace_rate = 1
     randinsert_rate = 3
     randdelete_rate = 0.15
     randswap_rate = 2   
     articletype = 0
+#    articletype = 1
 articlelabel = ['dokujo_it', 'dokujo_peachy']
 print("num_of_learn:",numof_learn," max_epoch:", max_epoch," num_of_batch:", batch_size,
       " articletype:", articlelabel[articletype])
@@ -178,7 +179,7 @@ class randinsert(object):
             i = random.randint(1,len(textlist)-1)
 #            print('len: ', len(textlist))
 #            print(i)
-            while textlist[i] == 3:
+            while textlist[i] == 3 or  textlist[i] == 9:
                 i = random.randint(1,len(textlist)-1)
 #                print(i)
             textlist = torch.cat([textlist[0:i], torch.tensor([insword]), textlist[i:-1]])
@@ -190,7 +191,7 @@ class randdelete(object):
     def __call__(self, textlist):
 #        print(textlist.shape)
         for i in range(3,len(textlist)-1):
-            if textlist[i] == 3:
+            if textlist[i] == 3 or  textlist[i] == 9:
                 continue
             r = random.uniform(0, 1)
             if r < self.num:
@@ -209,10 +210,10 @@ class randswap(object):
             while self.num > counter:
                 box = 0
                 random_idx_1 = random.randint(1, len(textlist)-1)
-                while textlist[random_idx_1] == 3:
+                while textlist[random_idx_1] == 3 or textlist[random_idx_1] == 9:
                     random_idx_1 = random.randint(0, len(textlist)-1)
                 random_idx_2 = random.randint(1, len(textlist)-1)
-                while random_idx_1 == random_idx_2 or textlist[random_idx_2] == 3:
+                while random_idx_1 == random_idx_2 or textlist[random_idx_2] == 3 or textlist[random_idx_1] == 9:
                     random_idx_2 = random.randint(0, len(textlist)-1)
                     # print(random_idx_1, random_idx_2)
                 box = textlist[random_idx_1]
@@ -237,6 +238,7 @@ class randswap(object):
 # In[8]:
 
 
+#処理をした結果を保存するファイル名 
 tsv_fname = "all_text.tsv" 
 '''
 #urllib.request.urlretrieve("https://www.rondhuit.com/download/ldcc-20140209.tar.gz", "ldcc-20140209.tar.gz")
@@ -244,7 +246,6 @@ tsv_fname = "all_text.tsv"
 #tgz_fname = "ldcc-20140209.tar.gz" 
 # 2つをニュースメディアのジャンルを選定
 mydata = '/export/livedoor' 
-#処理をした結果を保存するファイル名 
 '''
 def remove_brackets(inp):
     output = re.sub(u'[〃-〿]', '',(re.sub('＝|=|×|\(|\)|“|”|（|）|／|\[|\]| |　|…|・|\n|\t|/|＜|＞|@|＠', '', re.sub(u'[ℊ-⿻]', '', inp)))) #210A ~ 2FFF
@@ -326,9 +327,16 @@ import pandas as pd
 df = pd.read_csv("all_text.tsv", 
                  delimiter='\t', header=None, names=['media_name', 'label','title','sentence'])
 
+if articletype == 0:
+    df_ = pd.read_csv("summary_set_dokujo_it.tsv", 
+                     delimiter='\t', header=None, names=['summaries'])
+elif articletype == 1:
+    df_ = pd.read_csv("summary_set_dokujo_peachy.tsv", 
+                     delimiter='\t', header=None, names=['summaries'])
+
 # データの確認
 #print(f'データサイズ： {df.shape}')
-#df.sample(10)
+#print(df_.sample(10))
 
 
 # //文章データをsentences、ラベルデータを labelsに保存、以降この2変数だけを利用
@@ -418,19 +426,13 @@ for i in enumerate(wakati_sentences):
         sectionlist.append(1)
 
 
-# In[15]:
-
-
-#print(ssentences[0])
-
-
 # # BERT Tokenizerを用いて単語分割・IDへ変換
 # ## Tokenizerの準備
 # 単語分割とIDへ変換
 
 # # テスト実行
 
-# In[16]:
+# In[15]:
 
 
 w_input_ids = []
@@ -449,13 +451,13 @@ for sent in ssentences:
                             return_attention_mask = True,   # Attention maksの作成
                             return_tensors = 'pt',     #  Pytorch tensorsで返す
                        )
-        p_input_ids.append(torch.tensor(sencoded_dict['input_ids']).view(-1))
-        p_attention_masks.append(torch.tensor(sencoded_dict['attention_mask']).view(-1))
+        p_input_ids.append(torch.tensor(sencoded_dict['input_ids']).clone().detach().view(-1))
+        p_attention_masks.append(torch.tensor(sencoded_dict['attention_mask']).clone().detach().view(-1))
     w_input_ids.append(p_input_ids)
     w_attention_masks.append(p_attention_masks)
 
 
-# In[17]:
+# In[16]:
 
 
 # nagasa soroeru yo - id
@@ -468,7 +470,7 @@ for i in range(len(w_input_ids)):
             w_input_ids[i].append(pad)
 
 
-# In[18]:
+# In[17]:
 
 
 # nagasa soroeru yo - attention
@@ -480,14 +482,7 @@ for i in range(len(w_attention_masks)):
             w_attention_masks[i].append(pad)
 
 
-# In[19]:
-
-
-#len(w_input_ids)
-#len(sectionlist)
-
-
-# In[20]:
+# In[18]:
 
 
 # 80%地点のIDを取得
@@ -498,7 +493,7 @@ val_size = num_dataset - train_size
 #print('検証データ数:{}'.format(val_size))
 
 
-# In[21]:
+# In[19]:
 
 
 from torch.utils.data import Dataset
@@ -534,7 +529,8 @@ class MyDatasets(torch.utils.data.Dataset):
         self.transform = transform
         
     def __getitem__(self, idx):
-        xa, mask, label, valid = self.ids[idx], self.attention_mask[idx], self.labels[idx], self.valids[idx]
+        xa, mask, label, valid =\
+            self.ids[idx], self.attention_mask[idx], self.labels[idx], self.valids[idx]
         if self.transform:
             xa = self.transform(xa)
         return xa, mask, [label]*len(xa), valid
@@ -542,8 +538,24 @@ class MyDatasets(torch.utils.data.Dataset):
     def __len__(self):
         return len(self.ids)
 
-indices = np.random.choice(num_dataset, num_dataset, replace=False)
 
+# In[20]:
+
+
+wt_input_ids = []
+wt_attention_masks = []
+wt_labels = []
+wt_values = []
+wv_input_ids = []
+wv_attention_masks = []
+wv_labels = []
+wv_values = []
+
+
+# In[21]:
+
+
+indices = np.random.choice(num_dataset, num_dataset, replace=False)
 # データセットクラスの作成 ichigyoume ha randamu shitei
 wt_input_ids = [w_input_ids[i] for i in indices[:train_size]]
 wt_attention_masks = [w_attention_masks[i] for i in indices[:train_size]]
@@ -553,6 +565,10 @@ wv_input_ids = [w_input_ids[i] for i in indices[train_size:]]
 wv_attention_masks = [w_attention_masks[i] for i in indices[train_size:]]
 wv_labels = [labels[i] for i in indices[train_size:]]
 wv_values = [sectionlist[i] for i in indices[train_size:]]
+
+
+# In[22]:
+
 
 train_dataset = MyDatasets(wt_input_ids, wt_attention_masks, wt_labels, wt_values)
 val_dataset = MyDatasets(wv_input_ids, wv_attention_masks, wv_labels, wv_values)
@@ -573,14 +589,6 @@ validation_dataloader = DataLoader(
             batch_size = 1,
             shuffle = False
         )
-
-
-# In[22]:
-
-
-#a = wt_input_ids[0][0].detach().numpy()
-# 50 kyoushi de-ta, saidai 46 block, 128+2
-#a[0]
 
 
 # In[23]:
@@ -607,18 +615,12 @@ optimizer = AdamW(model.parameters(), lr=2e-5)
 # In[25]:
 
 
-#test = next(iter(train_dataloader))
-
-
-# In[26]:
-
-
 # 学習の実行
 train_loss_ = []
 test_loss_ = []
 
 
-# In[27]:
+# In[26]:
 
 
 from tqdm import tqdm
@@ -703,10 +705,10 @@ def validation(model):
                     alloutputs.append(outputs)
                 if numof_validation < iteration:
                     break
-    return loss, alloutputs
+    return alloutputs
 
 
-# In[28]:
+# In[27]:
 
 
 # nagasa soroeru yo
@@ -719,7 +721,7 @@ for i in range(len(w_input_ids)):
             w_input_ids[i].append(pad)
 
 
-# In[29]:
+# In[28]:
 
 
 wandb.init(project="liBERTy-slide2")
@@ -731,7 +733,7 @@ for epoch in range(max_epoch):
 wandb.finish()
 
 
-# In[30]:
+# In[29]:
 
 
 wandb.init(project="liBERTy-slide2-v")
@@ -740,32 +742,25 @@ test_loss_ = validation(model)
 wandb.finish()
 
 
-# In[31]:
-
-
-# b_input_mask.size(), b_input_ids.size(), labels.size()
-# outputs = self.model(torch.unsqueeze(token_tensor, 0))
-
-
-# In[34]:
-
-
-#len(wv_labels)
-
-
 # # HOUHOU 1
 
-# In[35]:
+# In[58]:
+
+
+len(test_loss_),len(test_loss_[3]),len(test_loss_[0][0])
+
+
+# In[60]:
 
 
 methodone = []
-for i in range(len(test_loss_[1])):
+for i in range(len(test_loss_)):
     article = []
-    for j in range(len(test_loss_[1][i])):
-        block = np.argmax(test_loss_[1][i][j][0].numpy())
+    for j in range(len(test_loss_[i])):
+        block = np.argmax(test_loss_[i][j].numpy())
         article.append(block)
     articlesum = np.sum(np.array(article))
-    if articlesum/len(test_loss_[1][i]) <= 0.5:
+    if articlesum/len(test_loss_[i]) <= 0.5:
         methodone.append(0)
     else:
         methodone.append(1)
@@ -773,14 +768,14 @@ for i in range(len(test_loss_[1])):
 
 # # HOUHOU2
 
-# In[36]:
+# In[62]:
 
 
 methodtwo = []
-for i in range(len(test_loss_[1])):
+for i in range(len(test_loss_)):
     article = [0,0]
-    for j in range(len(test_loss_[1][i])):
-        block = test_loss_[1][i][j][0].numpy()
+    for j in range(len(test_loss_[i])):
+        block = test_loss_[i][j].numpy()
         article = [x+y for (x,y) in zip(article, block)]
     articlesum = np.argmax(np.array(article))
     if articlesum <= 0.5:
@@ -789,7 +784,7 @@ for i in range(len(test_loss_[1])):
         methodtwo.append(1)
 
 
-# In[37]:
+# In[64]:
 
 
 # nanka houhou 2 ga umaku ittenai kamo
@@ -797,7 +792,7 @@ for i in range(len(test_loss_[1])):
 len(methodtwo)
 
 
-# In[38]:
+# In[65]:
 
 
 one_df = pd.DataFrame(methodone, columns=['method1'])
@@ -807,7 +802,7 @@ accuracy_df = pd.concat([one_df, two_df, label_df], axis=1)
 accuracy_df.head(50)
 
 
-# In[39]:
+# In[50]:
 
 
 from sklearn.metrics import f1_score
@@ -818,7 +813,7 @@ def fscore(pdf):
     return f1_score(pdf, label_df.values[:len(pdf)])
 
 
-# In[40]:
+# In[51]:
 
 
 import csv
