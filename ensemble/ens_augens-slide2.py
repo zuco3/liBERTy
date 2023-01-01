@@ -153,7 +153,10 @@ class synreplace(object):
         self.num = num
     def __call__(self, textlist):
         # textlist: honbun no list
-        textlen = torch.where(textlist == 3)[0][0]
+        if len(torch.where(textlist == 3)[0]):
+            textlen = torch.where(textlist == 3)[0][0]
+        else:
+            textlen = len(textlist)
         for n in range(self.num):
             # chikan shiro
             masked_idx = random.randint(2, textlen-1)
