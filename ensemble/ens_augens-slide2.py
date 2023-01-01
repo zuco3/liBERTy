@@ -54,12 +54,12 @@ else:
     max_epoch = 20
     batch_size = 64
     transformflags = 'n' #'rids'
-    synreplace_rate = 1
+    synreplace_rate = 3
     randinsert_rate = 3
-    randdelete_rate = 0.15
-    randswap_rate = 2   
+    randdelete_rate = 0.08
+    randswap_rate = 2
     articletype = 0
-#    articletype = 1
+
 articlelabel = ['dokujo_it', 'dokujo_peachy']
 print("num_of_learn:",numof_learn," max_epoch:", max_epoch," num_of_batch:", batch_size,
       " articletype:", articlelabel[articletype])

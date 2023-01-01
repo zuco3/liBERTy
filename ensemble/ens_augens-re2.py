@@ -60,18 +60,6 @@ else:
     randswap_rate = 2
     articletype = 0
 
-    numof_learn = 50
-    numof_validation = 200
-    max_epoch = 1
-    batch_size = 64
-    transformflags = 'r' #'rids'
-    transformflags = 'rids' #'rids'
-    synreplace_rate = 3
-    randinsert_rate = 3
-    randdelete_rate = 0.08
-    randswap_rate = 2
-    articletype = 0
-
 articlelabel = ['dokujo_it', 'dokujo_peachy']
 print("num_of_learn:",numof_learn," max_epoch:", max_epoch," num_of_batch:", batch_size,
       " articletype:", articlelabel[articletype])
@@ -664,13 +652,13 @@ if 'r' in transformflags:
     transformmethods.append(synreplace(synreplace_rate))
     print("synreplace")
 if 'i' in transformflags:
-#    transformmethods.append(randinsert(randinsert_rate))
+    transformmethods.append(randinsert(randinsert_rate))
     print("randinsert")
 if 'd' in transformflags:
-#    transformmethods.append(randdelete(randdelete_rate))
+    transformmethods.append(randdelete(randdelete_rate))
     print("randdelete")
 if 's' in transformflags:
-#    transformmethods.append(randswap(randswap_rate))
+    transformmethods.append(randswap(randswap_rate))
     print("randswap")
 data_transform = transforms.Compose(transformmethods)
 
