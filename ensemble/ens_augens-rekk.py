@@ -20,7 +20,7 @@ parser.add_argument('-v', '--num_of_validation', type=int, default=200,
 parser.add_argument('-e', '--max_epoch', type=int, default=20, 
     help='number (default 20) of epoch to be executed for learning loop')
 parser.add_argument('-b', '--batch_size', type=int, default=64, 
-    help='size (defaualt 64) of batch for learning process')
+    help='size (default 64) of batch for learning process')
 parser.add_argument('-a', '--article_type', type=int, default=0, choices=[0,1], 
     help='article type (0: dokujo_it=default, 1:dokujo_peachy')
 parser.add_argument('-t', '--transformflags', default = 'n', #default='rids', 

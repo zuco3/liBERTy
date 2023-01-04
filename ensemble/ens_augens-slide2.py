@@ -5,7 +5,7 @@
 # 
 # 参考(https://qiita.com/takubb/items/fd972f0ac3dba909c293)これを基に改造し、最新のGoogle Colaboratoryで動作するようにした
 
-# In[1]:
+# In[37]:
 
 
 import argparse
@@ -59,6 +59,10 @@ else:
     randdelete_rate = 0.08
     randswap_rate = 2
     articletype = 0
+    
+    max_epoch = 5
+    numof_learn = 200
+
 
 articlelabel = ['dokujo_it', 'dokujo_peachy']
 print("num_of_learn:",numof_learn," max_epoch:", max_epoch," num_of_batch:", batch_size,
@@ -70,7 +74,7 @@ print(filestr)
 transformflags = list(transformflags)
 
 
-# In[2]:
+# In[38]:
 
 
 #!export CUDA_LAUNCH_BLOCKING=1
@@ -83,7 +87,7 @@ transformflags = list(transformflags)
 #!pip install mecab-python3
 
 
-# In[3]:
+# In[39]:
 
 
 import os
@@ -108,7 +112,7 @@ tokenizer.do_lower_case = True  # due to some bug of tokenizer config loading
 
 # # PyTorchとGPU設定
 
-# In[4]:
+# In[40]:
 
 
 #!pip install torch
@@ -118,7 +122,7 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 device
 
 
-# In[5]:
+# In[41]:
 
 
 def torch_fix_seed(seed=24):
@@ -133,14 +137,14 @@ torch_fix_seed()
 
 # # Data Augmentation kansuu
 
-# In[6]:
+# In[42]:
 
 
 from transformers import RobertaForMaskedLM
 robertamodel = RobertaForMaskedLM.from_pretrained("rinna/japanese-roberta-base")
 
 
-# In[7]:
+# In[43]:
 
 
 # synreplace - replace kasho kosuu
@@ -238,7 +242,7 @@ class randswap(object):
 #     
 # 以下、ファイルを読み込んで、必要な部分を抽出
 
-# In[8]:
+# In[44]:
 
 
 #処理をした結果を保存するファイル名 
@@ -273,7 +277,7 @@ def read_para(f):
     return p [:-1]
 
 
-# In[9]:
+# In[45]:
 
 
 if articletype == 0:
@@ -322,7 +326,7 @@ for i in range(2):
 
 # pandasでデータを読み込み
 
-# In[10]:
+# In[46]:
 
 
 import pandas as pd
@@ -344,7 +348,7 @@ elif articletype == 1:
 
 # //文章データをsentences、ラベルデータを labelsに保存、以降この2変数だけを利用
 
-# In[11]:
+# In[47]:
 
 
 mn = df.media_name.values
@@ -353,7 +357,7 @@ titles = df.title.values
 sentences = df.sentence.values
 
 
-# In[12]:
+# In[48]:
 
 
 tagger = MeCab.Tagger("-Owakati")
@@ -372,7 +376,7 @@ def make_wakati(sentence):
     return wakati
 
 
-# In[13]:
+# In[49]:
 
 
 wakati_sentences = []
@@ -381,7 +385,7 @@ for i in range(len(sentences)):
     wakati_sentences.append(make_wakati(sentences[i]))
 
 
-# In[14]:
+# In[50]:
 
 
 wcount = 256
@@ -435,7 +439,7 @@ for i in enumerate(wakati_sentences):
 
 # # テスト実行
 
-# In[15]:
+# In[51]:
 
 
 w_input_ids = []
@@ -460,7 +464,7 @@ for sent in ssentences:
     w_attention_masks.append(p_attention_masks)
 
 
-# In[16]:
+# In[52]:
 
 
 # nagasa soroeru yo - id
@@ -473,7 +477,7 @@ for i in range(len(w_input_ids)):
             w_input_ids[i].append(pad)
 
 
-# In[17]:
+# In[53]:
 
 
 # nagasa soroeru yo - attention
@@ -485,7 +489,7 @@ for i in range(len(w_attention_masks)):
             w_attention_masks[i].append(pad)
 
 
-# In[18]:
+# In[54]:
 
 
 # 80%地点のIDを取得
@@ -496,7 +500,7 @@ val_size = num_dataset - train_size
 #print('検証データ数:{}'.format(val_size))
 
 
-# In[19]:
+# In[55]:
 
 
 from torch.utils.data import Dataset
@@ -542,7 +546,7 @@ class MyDatasets(torch.utils.data.Dataset):
         return len(self.ids)
 
 
-# In[20]:
+# In[56]:
 
 
 wt_input_ids = []
@@ -555,7 +559,7 @@ wv_labels = []
 wv_values = []
 
 
-# In[21]:
+# In[57]:
 
 
 indices = np.random.choice(num_dataset, num_dataset, replace=False)
@@ -570,7 +574,7 @@ wv_labels = [labels[i] for i in indices[train_size:]]
 wv_values = [sectionlist[i] for i in indices[train_size:]]
 
 
-# In[22]:
+# In[58]:
 
 
 train_dataset = MyDatasets(wt_input_ids, wt_attention_masks, wt_labels, wt_values)
@@ -594,7 +598,7 @@ validation_dataloader = DataLoader(
         )
 
 
-# In[23]:
+# In[59]:
 
 
 from transformers import BertForSequenceClassification,AdamW,BertConfig
@@ -608,14 +612,14 @@ model = BertForSequenceClassification.from_pretrained(
 ).to(device)
 
 
-# In[24]:
+# In[60]:
 
 
 # 最適化手法の設定
 optimizer = AdamW(model.parameters(), lr=2e-5)
 
 
-# In[25]:
+# In[61]:
 
 
 # 学習の実行
@@ -623,7 +627,7 @@ train_loss_ = []
 test_loss_ = []
 
 
-# In[26]:
+# In[62]:
 
 
 from tqdm import tqdm
@@ -711,7 +715,7 @@ def validation(model):
     return alloutputs
 
 
-# In[27]:
+# In[63]:
 
 
 # nagasa soroeru yo
@@ -724,7 +728,7 @@ for i in range(len(w_input_ids)):
             w_input_ids[i].append(pad)
 
 
-# In[28]:
+# In[64]:
 
 
 wandb.init(project="liBERTy-slide2")
@@ -736,7 +740,7 @@ for epoch in range(max_epoch):
 wandb.finish()
 
 
-# In[29]:
+# In[65]:
 
 
 wandb.init(project="liBERTy-slide2-v")
@@ -747,13 +751,13 @@ wandb.finish()
 
 # # HOUHOU 1
 
-# In[58]:
+# In[109]:
 
 
 len(test_loss_),len(test_loss_[3]),len(test_loss_[0][0])
 
 
-# In[60]:
+# In[110]:
 
 
 methodone = []
@@ -771,7 +775,7 @@ for i in range(len(test_loss_)):
 
 # # HOUHOU2
 
-# In[62]:
+# In[111]:
 
 
 methodtwo = []
@@ -787,7 +791,7 @@ for i in range(len(test_loss_)):
         methodtwo.append(1)
 
 
-# In[64]:
+# In[112]:
 
 
 # nanka houhou 2 ga umaku ittenai kamo
@@ -795,7 +799,7 @@ for i in range(len(test_loss_)):
 len(methodtwo)
 
 
-# In[65]:
+# In[113]:
 
 
 one_df = pd.DataFrame(methodone, columns=['method1'])
@@ -805,7 +809,53 @@ accuracy_df = pd.concat([one_df, two_df, label_df], axis=1)
 accuracy_df.head(50)
 
 
-# In[50]:
+# # HOUHOU3
+
+# In[114]:
+
+
+def softmax(x):
+    u = np.sum(np.exp(x))
+    return np.exp(x)/u
+
+
+# In[115]:
+
+
+methodthree = []
+for i in range(len(test_loss_)):
+    article = [0,0]
+    for j in range(len(test_loss_[i])):
+        block = test_loss_[i][j].numpy()
+        sm = [softmax(np.array(block[0]))]
+        article = [x+y for (x,y) in zip(article, sm)] 
+    articlesum = np.argmax(np.array(article))
+    if articlesum <= 0.5:
+        methodthree.append(0)
+    else:
+        methodthree.append(1)
+
+
+# In[116]:
+
+
+# nanka houhou 2 ga umaku ittenai kamo
+# seikai tono hikaku shitai ne
+len(methodthree)
+
+
+# In[117]:
+
+
+one_df = pd.DataFrame(methodone, columns=['method1'])
+two_df = pd.DataFrame(methodtwo, columns=['method2'])
+three_df = pd.DataFrame(methodthree, columns=['method3'])
+label_df = pd.DataFrame(wv_labels, columns=['true_label'])
+accuracy_df = pd.concat([one_df, two_df, three_df, label_df], axis=1)
+accuracy_df.head(50)
+
+
+# In[118]:
 
 
 from sklearn.metrics import f1_score
@@ -816,14 +866,24 @@ def fscore(pdf):
     return f1_score(pdf, label_df.values[:len(pdf)])
 
 
-# In[51]:
+# In[119]:
 
 
 import csv
 f = open('ens_augens-slide2-rep-'+filestr+'.csv', 'w')
 onepreds = one_df.values
 twopreds = two_df.values
+threepreds = three_df.values
 f.write('methodone: acc:'+str(accuracy(onepreds))+', f1:'+str(fscore(onepreds))+'\n')
 f.write('methodtwo: acc:'+str(accuracy(twopreds))+', f1:'+str(fscore(twopreds))+'\n')
+f.write('methodthree: acc:'+str(accuracy(threepreds))+', f1:'+str(fscore(threepreds))+'\n')
 f.close()
+
+
+# In[120]:
+
+
+print('methodone: acc:'+str(accuracy(onepreds))+', f1:'+str(fscore(onepreds))+'\n')
+print('methodtwo: acc:'+str(accuracy(twopreds))+', f1:'+str(fscore(twopreds))+'\n')
+print('methodthree: acc:'+str(accuracy(threepreds))+', f1:'+str(fscore(threepreds))+'\n')
 
