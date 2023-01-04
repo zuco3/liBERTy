@@ -59,10 +59,6 @@ else:
     randdelete_rate = 0.08
     randswap_rate = 2
     articletype = 0
-    
-    max_epoch = 5
-    numof_learn = 200
-
 
 articlelabel = ['dokujo_it', 'dokujo_peachy']
 print("num_of_learn:",numof_learn," max_epoch:", max_epoch," num_of_batch:", batch_size,
