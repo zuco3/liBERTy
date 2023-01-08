@@ -5,7 +5,7 @@
 # 
 # 参考(https://qiita.com/takubb/items/fd972f0ac3dba909c293)これを基に改造し、最新のGoogle Colaboratoryで動作するようにした
 
-# In[37]:
+# In[1]:
 
 
 import argparse
@@ -59,18 +59,19 @@ else:
     randdelete_rate = 0.08
     randswap_rate = 2
     articletype = 0
+    
+    max_epoch = 20
+    numof_learn = 200
 
 articlelabel = ['dokujo_it', 'dokujo_peachy']
 print("num_of_learn:",numof_learn," max_epoch:", max_epoch," num_of_batch:", batch_size,
       " articletype:", articlelabel[articletype])
-filestr = "l:"+str(numof_learn)+"_e:"+str(max_epoch)+"_b:"+str(batch_size)+"_t:"+transformflags+\
-    "_r:"+str(synreplace_rate)+'_i:'+str(randinsert_rate)+'_d:'+str(randdelete_rate)+'_s:'+str(randswap_rate)+\
-    "_a:"+articlelabel[articletype]
+filestr = "l:"+str(numof_learn)+"_e:"+str(max_epoch)+"_b:"+str(batch_size)+"_t:"+transformflags+    "_r:"+str(synreplace_rate)+'_i:'+str(randinsert_rate)+'_d:'+str(randdelete_rate)+'_s:'+str(randswap_rate)+    "_a:"+articlelabel[articletype]
 print(filestr)
 transformflags = list(transformflags)
 
 
-# In[38]:
+# In[2]:
 
 
 #!export CUDA_LAUNCH_BLOCKING=1
@@ -83,7 +84,7 @@ transformflags = list(transformflags)
 #!pip install mecab-python3
 
 
-# In[39]:
+# In[3]:
 
 
 import os
@@ -108,7 +109,7 @@ tokenizer.do_lower_case = True  # due to some bug of tokenizer config loading
 
 # # PyTorchとGPU設定
 
-# In[40]:
+# In[4]:
 
 
 #!pip install torch
@@ -118,14 +119,17 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 device
 
 
-# In[41]:
+# In[5]:
 
 
 def torch_fix_seed(seed=24):
     random.seed(seed)
+    os.environ['PYTHONHASHSEED'] = str(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
-    torch.cuda.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed(seed)
+        torch.cuda.manual_seed_all(seed)
     torch.backends.cudnn.deterministic = True
     torch.use_deterministic_algorithms = True
 torch_fix_seed()
@@ -133,14 +137,14 @@ torch_fix_seed()
 
 # # Data Augmentation kansuu
 
-# In[42]:
+# In[6]:
 
 
 from transformers import RobertaForMaskedLM
 robertamodel = RobertaForMaskedLM.from_pretrained("rinna/japanese-roberta-base")
 
 
-# In[43]:
+# In[7]:
 
 
 # synreplace - replace kasho kosuu
@@ -238,7 +242,7 @@ class randswap(object):
 #     
 # 以下、ファイルを読み込んで、必要な部分を抽出
 
-# In[44]:
+# In[8]:
 
 
 #処理をした結果を保存するファイル名 
@@ -273,7 +277,7 @@ def read_para(f):
     return p [:-1]
 
 
-# In[45]:
+# In[9]:
 
 
 if articletype == 0:
@@ -322,7 +326,7 @@ for i in range(2):
 
 # pandasでデータを読み込み
 
-# In[46]:
+# In[10]:
 
 
 import pandas as pd
@@ -344,7 +348,7 @@ elif articletype == 1:
 
 # //文章データをsentences、ラベルデータを labelsに保存、以降この2変数だけを利用
 
-# In[47]:
+# In[11]:
 
 
 mn = df.media_name.values
@@ -353,7 +357,7 @@ titles = df.title.values
 sentences = df.sentence.values
 
 
-# In[48]:
+# In[12]:
 
 
 tagger = MeCab.Tagger("-Owakati")
@@ -372,7 +376,7 @@ def make_wakati(sentence):
     return wakati
 
 
-# In[49]:
+# In[13]:
 
 
 wakati_sentences = []
@@ -381,7 +385,7 @@ for i in range(len(sentences)):
     wakati_sentences.append(make_wakati(sentences[i]))
 
 
-# In[50]:
+# In[14]:
 
 
 wcount = 256
@@ -435,7 +439,7 @@ for i in enumerate(wakati_sentences):
 
 # # テスト実行
 
-# In[51]:
+# In[15]:
 
 
 w_input_ids = []
@@ -460,7 +464,7 @@ for sent in ssentences:
     w_attention_masks.append(p_attention_masks)
 
 
-# In[52]:
+# In[16]:
 
 
 # nagasa soroeru yo - id
@@ -473,7 +477,7 @@ for i in range(len(w_input_ids)):
             w_input_ids[i].append(pad)
 
 
-# In[53]:
+# In[17]:
 
 
 # nagasa soroeru yo - attention
@@ -485,7 +489,7 @@ for i in range(len(w_attention_masks)):
             w_attention_masks[i].append(pad)
 
 
-# In[54]:
+# In[18]:
 
 
 # 80%地点のIDを取得
@@ -496,7 +500,7 @@ val_size = num_dataset - train_size
 #print('検証データ数:{}'.format(val_size))
 
 
-# In[55]:
+# In[19]:
 
 
 from torch.utils.data import Dataset
@@ -532,8 +536,7 @@ class MyDatasets(torch.utils.data.Dataset):
         self.transform = transform
         
     def __getitem__(self, idx):
-        xa, mask, label, valid =\
-            self.ids[idx], self.attention_mask[idx], self.labels[idx], self.valids[idx]
+        xa, mask, label, valid =            self.ids[idx], self.attention_mask[idx], self.labels[idx], self.valids[idx]
         if self.transform:
             xa = self.transform(xa)
         return xa, mask, [label]*len(xa), valid
@@ -542,7 +545,7 @@ class MyDatasets(torch.utils.data.Dataset):
         return len(self.ids)
 
 
-# In[56]:
+# In[20]:
 
 
 wt_input_ids = []
@@ -555,7 +558,7 @@ wv_labels = []
 wv_values = []
 
 
-# In[57]:
+# In[21]:
 
 
 indices = np.random.choice(num_dataset, num_dataset, replace=False)
@@ -570,7 +573,7 @@ wv_labels = [labels[i] for i in indices[train_size:]]
 wv_values = [sectionlist[i] for i in indices[train_size:]]
 
 
-# In[58]:
+# In[22]:
 
 
 train_dataset = MyDatasets(wt_input_ids, wt_attention_masks, wt_labels, wt_values)
@@ -594,7 +597,7 @@ validation_dataloader = DataLoader(
         )
 
 
-# In[59]:
+# In[23]:
 
 
 from transformers import BertForSequenceClassification,AdamW,BertConfig
@@ -608,14 +611,14 @@ model = BertForSequenceClassification.from_pretrained(
 ).to(device)
 
 
-# In[60]:
+# In[24]:
 
 
 # 最適化手法の設定
 optimizer = AdamW(model.parameters(), lr=2e-5)
 
 
-# In[61]:
+# In[25]:
 
 
 # 学習の実行
@@ -623,7 +626,7 @@ train_loss_ = []
 test_loss_ = []
 
 
-# In[62]:
+# In[26]:
 
 
 from tqdm import tqdm
@@ -711,7 +714,7 @@ def validation(model):
     return alloutputs
 
 
-# In[63]:
+# In[27]:
 
 
 # nagasa soroeru yo
@@ -724,7 +727,7 @@ for i in range(len(w_input_ids)):
             w_input_ids[i].append(pad)
 
 
-# In[64]:
+# In[28]:
 
 
 wandb.init(project="liBERTy-slide2")
@@ -736,7 +739,7 @@ for epoch in range(max_epoch):
 wandb.finish()
 
 
-# In[65]:
+# In[29]:
 
 
 wandb.init(project="liBERTy-slide2-v")
@@ -747,13 +750,13 @@ wandb.finish()
 
 # # HOUHOU 1
 
-# In[109]:
+# In[30]:
 
 
 len(test_loss_),len(test_loss_[3]),len(test_loss_[0][0])
 
 
-# In[110]:
+# In[31]:
 
 
 methodone = []
@@ -771,7 +774,7 @@ for i in range(len(test_loss_)):
 
 # # HOUHOU2
 
-# In[111]:
+# In[32]:
 
 
 methodtwo = []
@@ -787,7 +790,7 @@ for i in range(len(test_loss_)):
         methodtwo.append(1)
 
 
-# In[112]:
+# In[33]:
 
 
 # nanka houhou 2 ga umaku ittenai kamo
@@ -795,7 +798,7 @@ for i in range(len(test_loss_)):
 len(methodtwo)
 
 
-# In[113]:
+# In[34]:
 
 
 one_df = pd.DataFrame(methodone, columns=['method1'])
@@ -807,7 +810,7 @@ accuracy_df.head(50)
 
 # # HOUHOU3
 
-# In[114]:
+# In[35]:
 
 
 def softmax(x):
@@ -815,7 +818,7 @@ def softmax(x):
     return np.exp(x)/u
 
 
-# In[115]:
+# In[36]:
 
 
 methodthree = []
@@ -832,7 +835,7 @@ for i in range(len(test_loss_)):
         methodthree.append(1)
 
 
-# In[116]:
+# In[37]:
 
 
 # nanka houhou 2 ga umaku ittenai kamo
@@ -840,7 +843,7 @@ for i in range(len(test_loss_)):
 len(methodthree)
 
 
-# In[117]:
+# In[38]:
 
 
 one_df = pd.DataFrame(methodone, columns=['method1'])
@@ -851,7 +854,7 @@ accuracy_df = pd.concat([one_df, two_df, three_df, label_df], axis=1)
 accuracy_df.head(50)
 
 
-# In[118]:
+# In[39]:
 
 
 from sklearn.metrics import f1_score
@@ -862,7 +865,7 @@ def fscore(pdf):
     return f1_score(pdf, label_df.values[:len(pdf)])
 
 
-# In[119]:
+# In[40]:
 
 
 import csv
@@ -876,7 +879,7 @@ f.write('methodthree: acc:'+str(accuracy(threepreds))+', f1:'+str(fscore(threepr
 f.close()
 
 
-# In[120]:
+# In[41]:
 
 
 print('methodone: acc:'+str(accuracy(onepreds))+', f1:'+str(fscore(onepreds))+'\n')
