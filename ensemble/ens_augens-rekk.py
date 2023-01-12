@@ -63,7 +63,9 @@ else:
 articlelabel = ['dokujo_it', 'dokujo_peachy']
 print("num_of_learn:",numof_learn," max_epoch:", max_epoch," num_of_batch:", batch_size,
       " articletype:", articlelabel[articletype])
-filestr = "l:"+str(numof_learn)+"_e:"+str(max_epoch)+"_b:"+str(batch_size)+"_t:"+transformflags+    "_r:"+str(synreplace_rate)+'_i:'+str(randinsert_rate)+'_d:'+str(randdelete_rate)+'_s:'+str(randswap_rate)+    "_a:"+articlelabel[articletype]
+filestr = "l:"+str(numof_learn)+"_e:"+str(max_epoch)+"_b:"+str(batch_size)+"_t:"+transformflags+\
+    "_r:"+str(synreplace_rate)+'_i:'+str(randinsert_rate)+'_d:'+str(randdelete_rate)+'_s:'+str(randswap_rate)+\
+    "_a:"+articlelabel[articletype]
 print(filestr)
 transformflags = list(transformflags)
 

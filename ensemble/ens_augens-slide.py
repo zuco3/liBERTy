@@ -21,8 +21,8 @@ parser.add_argument('-e', '--max_epoch', type=int, default=20,
     help='number (default 20) of epoch to be executed for learning loop')
 parser.add_argument('-b', '--batch_size', type=int, default=64, 
     help='size (default 64) of batch for learning process')
-parser.add_argument('-a', '--article_type', type=int, default=0, choices=[0,1], 
-    help='article type (0: dokujo_it=default, 1:dokujo_peachy')
+parser.add_argument('-a', '--article_type', type=int, default=0, choices=[0,1,2], 
+    help='article type (0: dokujo_it=default, 1:dokujo_peachy, 2:fraud_calls')
 parser.add_argument('-t', '--transformflags', default = 'n', #default='rids', 
     help='NLP-JP transformer (default n) r:synreplace i:randinsert d:randdelete s:randswap n:none')
 parser.add_argument('-r', '--synreplace_rate', type=int, default=1, 
@@ -59,14 +59,18 @@ else:
     randdelete_rate = 0.08
     randswap_rate = 2
     articletype = 0
-    
-    max_epoch = 20
-    numof_learn = 200
 
-articlelabel = ['dokujo_it', 'dokujo_peachy']
+#    transformflags = 'rids'
+#    articletype = 2
+#    numof_learn = 100
+#    numof_validation = 50
+
+articlelabel = ['dokujo_it', 'dokujo_peachy', 'fraud_calls']
 print("num_of_learn:",numof_learn," max_epoch:", max_epoch," num_of_batch:", batch_size,
       " articletype:", articlelabel[articletype])
-filestr = "l:"+str(numof_learn)+"_e:"+str(max_epoch)+"_b:"+str(batch_size)+"_t:"+transformflags+    "_r:"+str(synreplace_rate)+'_i:'+str(randinsert_rate)+'_d:'+str(randdelete_rate)+'_s:'+str(randswap_rate)+    "_a:"+articlelabel[articletype]
+filestr = "l:"+str(numof_learn)+"_e:"+str(max_epoch)+"_b:"+str(batch_size)+"_t:"+transformflags+\
+    "_r:"+str(synreplace_rate)+'_i:'+str(randinsert_rate)+'_d:'+str(randdelete_rate)+'_s:'+str(randswap_rate)+\
+    "_a:"+articlelabel[articletype]
 print(filestr)
 transformflags = list(transformflags)
 
@@ -286,6 +290,9 @@ if articletype == 0:
 elif articletype == 1:
     directory = ['/export/livedoor/dokujo-tsushin', '/export/livedoor/peachy']
     target_genre = ["dokujo-tsushin", "peachy"]
+elif articletype == 2:
+    directory = ['/export/data/normal', '/export/data/oreore']
+    target_genre = ["normal", "oreore"]
 else:
     print('No articles')
     exit()
@@ -298,30 +305,52 @@ if os.path.exists(tsv_fname) == True:
         f.truncate(0)
 
 for i in range(2):
-    for filename in os.listdir(directory[i]):
-        if "LICENSE.txt" in filename:
-            continue
-        f = os.path.join(directory[i], filename)
-#        if os.path.isfile(f):
-#            print(f)
-        if target_genre[0] in f and f.endswith(".txt"):
-            with open(tsv_fname, "a") as wf:
-                writer = csv.writer(wf, delimiter='\t')
-                with open(f) as zf:
-                    title = read_title(zf)
-                    para = read_para(zf)
-                    row = [target_genre[0], '0', title, para]
-                    writer.writerow(row)
-            continue
-        if target_genre[1] in f and f.endswith(".txt"):
-            with open(tsv_fname, "a") as wf:
-                writer = csv.writer(wf, delimiter='\t')
-                with open(f) as zf:
-                    title = read_title(zf)
-                    para = read_para(zf)
-                    row = [target_genre[1], '1', title, para]
-                    writer.writerow(row)
-            continue
+    if articletype == 2:
+        for filename in os.listdir(directory[i]):
+            f = os.path.join(directory[i], filename)
+            if target_genre[0] in f and f.endswith(".txt"):
+                with open(tsv_fname, "a") as wf:
+                    writer = csv.writer(wf, delimiter='\t')
+                    with open(f) as zf:
+                        title = 'normal_call'
+                        para = next(zf)
+                        row = [target_genre[0], '0', title, para]
+                        writer.writerow(row)
+                continue
+            if target_genre[1] in f and f.endswith(".txt"):
+                with open(tsv_fname, "a") as wf:
+                    writer = csv.writer(wf, delimiter='\t')
+                    with open(f) as zf:
+                        title = 'oreore_call'
+                        para = next(zf)
+                        row = [target_genre[1], '1', title, para]
+                        writer.writerow(row)
+                continue
+    else:
+        for filename in os.listdir(directory[i]):
+            if "LICENSE.txt" in filename:
+                continue
+            f = os.path.join(directory[i], filename)
+    #        if os.path.isfile(f):
+    #            print(f)
+            if target_genre[0] in f and f.endswith(".txt"):
+                with open(tsv_fname, "a") as wf:
+                    writer = csv.writer(wf, delimiter='\t')
+                    with open(f) as zf:
+                        title = read_title(zf)
+                        para = read_para(zf)
+                        row = [target_genre[0], '0', title, para]
+                        writer.writerow(row)
+                continue
+            if target_genre[1] in f and f.endswith(".txt"):
+                with open(tsv_fname, "a") as wf:
+                    writer = csv.writer(wf, delimiter='\t')
+                    with open(f) as zf:
+                        title = read_title(zf)
+                        para = read_para(zf)
+                        row = [target_genre[1], '1', title, para]
+                        writer.writerow(row)
+                continue
 
 
 # pandasでデータを読み込み
@@ -341,6 +370,7 @@ elif articletype == 1:
     df_ = pd.read_csv("summary_set_dokujo_peachy.tsv", 
                      delimiter='\t', header=None, names=['summaries'])
 
+    
 # データの確認
 #print(f'データサイズ： {df.shape}')
 #print(df_.sample(10))
@@ -388,7 +418,7 @@ for i in range(len(sentences)):
 # In[14]:
 
 
-wcount = 256
+wcount = 256    # なおした
 
 emptylist = []
 ssentences = np.append(emptylist, copy.deepcopy(sentences))
@@ -396,39 +426,38 @@ ssentences = np.append(emptylist, copy.deepcopy(sentences))
 emplist = []
 sectionlist = []
 
-for i in enumerate(wakati_sentences):
+for i, w in enumerate(wakati_sentences):
     emp = 0
     section = 1
-    if len(i[1])>wcount:
-        wcount = 128
-        count = 0
+    if len(w)>wcount:
+        count = 0    # なおした
         countend = 0
-        ssentences[i[0]] = []
-        while len(i[1])-count-wcount>0:
+        ssentences[i] = []
+        while len(w)-count-wcount>0:
             oneph = ''
             countend_ = 1
             while countend_%wcount != 0:
-                oneph += i[1][countend]
+                oneph += w[countend]
                 countend+=1
                 countend_+=1
-            ssentences[i[0]].append(oneph)
+            ssentences[i].append(oneph)
             count += wcount-1
             section += 1
         oneph = ''
-        for j in range(len(i[1][count:-1])):
-            oneph += i[1][count]
+        for j in range(len(w[count:-1])):
+            oneph += w[count]
             count += 1
             emp += 1
         emplist.append(emp)
-        ssentences[i[0]].append('')
-        ssentences[i[0]][-1] = oneph
+        ssentences[i].append('')
+        ssentences[i][-1] = oneph
         sectionlist.append(section)
     else:
         oneph = ''
-        for k in range(len(i[1])):
-            oneph += i[1][k]
-            ssentences[i[0]] = oneph
-        emp = wcount - len(i[1])
+        for k in range(len(w)):
+            oneph += w[k]
+            ssentences[i] = [oneph]    # なおした
+        emp = wcount - len(w)
         emplist.append(emp)
         sectionlist.append(1)
 
@@ -439,13 +468,13 @@ for i in enumerate(wakati_sentences):
 
 # # テスト実行
 
-# In[15]:
+# In[16]:
 
 
 w_input_ids = []
 w_attention_masks = []
 
-for sent in ssentences:
+for i, sent in enumerate(ssentences):
     p_input_ids = []
     p_attention_masks = []
     for sect in sent:
@@ -464,11 +493,11 @@ for sent in ssentences:
     w_attention_masks.append(p_attention_masks)
 
 
-# In[16]:
+# In[17]:
 
 
 # nagasa soroeru yo - id
-pad = torch.full((1,130),3).view(-1)
+pad = torch.full((1,wcount+2),3).view(-1)    # なおした
 maxlen = max(sectionlist)
 
 for i in range(len(w_input_ids)):
@@ -477,11 +506,11 @@ for i in range(len(w_input_ids)):
             w_input_ids[i].append(pad)
 
 
-# In[17]:
+# In[18]:
 
 
 # nagasa soroeru yo - attention
-pad = torch.full((1,130),0).view(-1)
+pad = torch.full((1,wcount+2),0).view(-1)    # なおした
 
 for i in range(len(w_attention_masks)):
     if maxlen>len(w_attention_masks[i]):
@@ -489,7 +518,7 @@ for i in range(len(w_attention_masks)):
             w_attention_masks[i].append(pad)
 
 
-# In[18]:
+# In[19]:
 
 
 # 80%地点のIDを取得
@@ -500,7 +529,7 @@ val_size = num_dataset - train_size
 #print('検証データ数:{}'.format(val_size))
 
 
-# In[19]:
+# In[20]:
 
 
 from torch.utils.data import Dataset
@@ -536,7 +565,8 @@ class MyDatasets(torch.utils.data.Dataset):
         self.transform = transform
         
     def __getitem__(self, idx):
-        xa, mask, label, valid =            self.ids[idx], self.attention_mask[idx], self.labels[idx], self.valids[idx]
+        xa, mask, label, valid =\
+            self.ids[idx], self.attention_mask[idx], self.labels[idx], self.valids[idx]
         if self.transform:
             xa = self.transform(xa)
         return xa, mask, [label]*len(xa), valid
@@ -545,7 +575,7 @@ class MyDatasets(torch.utils.data.Dataset):
         return len(self.ids)
 
 
-# In[20]:
+# In[21]:
 
 
 wt_input_ids = []
@@ -558,7 +588,7 @@ wv_labels = []
 wv_values = []
 
 
-# In[21]:
+# In[22]:
 
 
 indices = np.random.choice(num_dataset, num_dataset, replace=False)
@@ -573,7 +603,7 @@ wv_labels = [labels[i] for i in indices[train_size:]]
 wv_values = [sectionlist[i] for i in indices[train_size:]]
 
 
-# In[22]:
+# In[23]:
 
 
 train_dataset = MyDatasets(wt_input_ids, wt_attention_masks, wt_labels, wt_values)
@@ -586,7 +616,8 @@ val_dataset = MyDatasets(wv_input_ids, wv_attention_masks, wv_labels, wv_values)
 train_dataloader = DataLoader(
             train_dataset,
             batch_size = batch_size,
-            shuffle = True
+#            shuffle = True
+            shuffle = False
         )
 
 # 検証データローダー
@@ -597,7 +628,7 @@ validation_dataloader = DataLoader(
         )
 
 
-# In[23]:
+# In[31]:
 
 
 from transformers import BertForSequenceClassification,AdamW,BertConfig
@@ -611,14 +642,14 @@ model = BertForSequenceClassification.from_pretrained(
 ).to(device)
 
 
-# In[24]:
+# In[32]:
 
 
 # 最適化手法の設定
 optimizer = AdamW(model.parameters(), lr=2e-5)
 
 
-# In[25]:
+# In[33]:
 
 
 # 学習の実行
@@ -626,7 +657,7 @@ train_loss_ = []
 test_loss_ = []
 
 
-# In[26]:
+# In[34]:
 
 
 from tqdm import tqdm
@@ -714,7 +745,7 @@ def validation(model):
     return alloutputs
 
 
-# In[27]:
+# In[35]:
 
 
 # nagasa soroeru yo
@@ -727,7 +758,7 @@ for i in range(len(w_input_ids)):
             w_input_ids[i].append(pad)
 
 
-# In[28]:
+# In[ ]:
 
 
 wandb.init(project="liBERTy-slide2")
@@ -739,7 +770,7 @@ for epoch in range(max_epoch):
 wandb.finish()
 
 
-# In[29]:
+# In[ ]:
 
 
 wandb.init(project="liBERTy-slide2-v")
@@ -750,13 +781,13 @@ wandb.finish()
 
 # # HOUHOU 1
 
-# In[30]:
+# In[ ]:
 
 
 len(test_loss_),len(test_loss_[3]),len(test_loss_[0][0])
 
 
-# In[31]:
+# In[ ]:
 
 
 methodone = []
@@ -774,7 +805,7 @@ for i in range(len(test_loss_)):
 
 # # HOUHOU2
 
-# In[32]:
+# In[ ]:
 
 
 methodtwo = []
@@ -790,7 +821,7 @@ for i in range(len(test_loss_)):
         methodtwo.append(1)
 
 
-# In[33]:
+# In[ ]:
 
 
 # nanka houhou 2 ga umaku ittenai kamo
@@ -798,7 +829,7 @@ for i in range(len(test_loss_)):
 len(methodtwo)
 
 
-# In[34]:
+# In[ ]:
 
 
 one_df = pd.DataFrame(methodone, columns=['method1'])
@@ -810,7 +841,7 @@ accuracy_df.head(50)
 
 # # HOUHOU3
 
-# In[35]:
+# In[ ]:
 
 
 def softmax(x):
@@ -818,7 +849,7 @@ def softmax(x):
     return np.exp(x)/u
 
 
-# In[36]:
+# In[ ]:
 
 
 methodthree = []
@@ -835,7 +866,7 @@ for i in range(len(test_loss_)):
         methodthree.append(1)
 
 
-# In[37]:
+# In[ ]:
 
 
 # nanka houhou 2 ga umaku ittenai kamo
@@ -843,7 +874,7 @@ for i in range(len(test_loss_)):
 len(methodthree)
 
 
-# In[38]:
+# In[ ]:
 
 
 one_df = pd.DataFrame(methodone, columns=['method1'])
@@ -854,7 +885,7 @@ accuracy_df = pd.concat([one_df, two_df, three_df, label_df], axis=1)
 accuracy_df.head(50)
 
 
-# In[39]:
+# In[ ]:
 
 
 from sklearn.metrics import f1_score
@@ -865,7 +896,7 @@ def fscore(pdf):
     return f1_score(pdf, label_df.values[:len(pdf)])
 
 
-# In[40]:
+# In[ ]:
 
 
 import csv
@@ -879,7 +910,7 @@ f.write('methodthree: acc:'+str(accuracy(threepreds))+', f1:'+str(fscore(threepr
 f.close()
 
 
-# In[41]:
+# In[ ]:
 
 
 print('methodone: acc:'+str(accuracy(onepreds))+', f1:'+str(fscore(onepreds))+'\n')
