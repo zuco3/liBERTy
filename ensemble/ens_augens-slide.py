@@ -66,11 +66,11 @@ else:
 #    numof_validation = 50
 
 articlelabel = ['dokujo_it', 'dokujo_peachy', 'fraud_calls']
-print("num_of_learn:",numof_learn," max_epoch:", max_epoch," num_of_batch:", batch_size,
-      " articletype:", articlelabel[articletype])
-filestr = "l:"+str(numof_learn)+"_e:"+str(max_epoch)+"_b:"+str(batch_size)+"_t:"+transformflags+\
-    "_r:"+str(synreplace_rate)+'_i:'+str(randinsert_rate)+'_d:'+str(randdelete_rate)+'_s:'+str(randswap_rate)+\
-    "_a:"+articlelabel[articletype]
+print("num_of_learn=",numof_learn," max_epoch=", max_epoch," num_of_batch=", batch_size,
+      " articletype=", articlelabel[articletype])
+filestr = "l="+str(numof_learn)+"_e="+str(max_epoch)+"_b="+str(batch_size)+"_t="+transformflags+\
+    "_r="+str(synreplace_rate)+'_i='+str(randinsert_rate)+'_d='+str(randdelete_rate)+'_s='+str(randswap_rate)+\
+    "_a="+articlelabel[articletype]
 print(filestr)
 transformflags = list(transformflags)
 
@@ -468,7 +468,7 @@ for i, w in enumerate(wakati_sentences):
 
 # # テスト実行
 
-# In[16]:
+# In[15]:
 
 
 w_input_ids = []
@@ -493,7 +493,7 @@ for i, sent in enumerate(ssentences):
     w_attention_masks.append(p_attention_masks)
 
 
-# In[17]:
+# In[16]:
 
 
 # nagasa soroeru yo - id
@@ -506,7 +506,7 @@ for i in range(len(w_input_ids)):
             w_input_ids[i].append(pad)
 
 
-# In[18]:
+# In[17]:
 
 
 # nagasa soroeru yo - attention
@@ -518,7 +518,7 @@ for i in range(len(w_attention_masks)):
             w_attention_masks[i].append(pad)
 
 
-# In[19]:
+# In[18]:
 
 
 # 80%地点のIDを取得
@@ -529,7 +529,7 @@ val_size = num_dataset - train_size
 #print('検証データ数:{}'.format(val_size))
 
 
-# In[20]:
+# In[19]:
 
 
 from torch.utils.data import Dataset
@@ -575,7 +575,7 @@ class MyDatasets(torch.utils.data.Dataset):
         return len(self.ids)
 
 
-# In[21]:
+# In[20]:
 
 
 wt_input_ids = []
@@ -588,7 +588,7 @@ wv_labels = []
 wv_values = []
 
 
-# In[22]:
+# In[21]:
 
 
 indices = np.random.choice(num_dataset, num_dataset, replace=False)
@@ -603,7 +603,7 @@ wv_labels = [labels[i] for i in indices[train_size:]]
 wv_values = [sectionlist[i] for i in indices[train_size:]]
 
 
-# In[23]:
+# In[22]:
 
 
 train_dataset = MyDatasets(wt_input_ids, wt_attention_masks, wt_labels, wt_values)
@@ -628,7 +628,7 @@ validation_dataloader = DataLoader(
         )
 
 
-# In[31]:
+# In[23]:
 
 
 from transformers import BertForSequenceClassification,AdamW,BertConfig
@@ -642,14 +642,14 @@ model = BertForSequenceClassification.from_pretrained(
 ).to(device)
 
 
-# In[32]:
+# In[ ]:
 
 
 # 最適化手法の設定
 optimizer = AdamW(model.parameters(), lr=2e-5)
 
 
-# In[33]:
+# In[ ]:
 
 
 # 学習の実行
@@ -657,7 +657,7 @@ train_loss_ = []
 test_loss_ = []
 
 
-# In[34]:
+# In[ ]:
 
 
 from tqdm import tqdm
@@ -745,7 +745,7 @@ def validation(model):
     return alloutputs
 
 
-# In[35]:
+# In[ ]:
 
 
 # nagasa soroeru yo
@@ -761,7 +761,7 @@ for i in range(len(w_input_ids)):
 # In[ ]:
 
 
-wandb.init(project="liBERTy-slide2")
+wandb.init(project="liBERTy-slide")
 for epoch in range(max_epoch):
     train_ = train(epoch, model)
     train_loss_.append(train_)
@@ -773,7 +773,7 @@ wandb.finish()
 # In[ ]:
 
 
-wandb.init(project="liBERTy-slide2-v")
+wandb.init(project="liBERTy-slide-v")
 test_loss_ = validation(model)
 # print('test: ', test_loss_)
 wandb.finish()
@@ -900,7 +900,7 @@ def fscore(pdf):
 
 
 import csv
-f = open('ens_augens-slide2-rep-'+filestr+'.csv', 'w')
+f = open('ens_augens-slide-rep-'+filestr+'.csv', 'w')
 onepreds = one_df.values
 twopreds = two_df.values
 threepreds = three_df.values

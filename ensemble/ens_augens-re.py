@@ -25,6 +25,8 @@ parser.add_argument('-a', '--article_type', type=int, default=0, choices=[0,1],
     help='article type (0: dokujo_it=default, 1:dokujo_peachy')
 parser.add_argument('-t', '--transformflags', default = 'n', #default='rids', 
     help='NLP-JP transformer (default n) r:synreplace i:randinsert d:randdelete s:randswap n:none')
+parser.add_argument('-p', '--pattern_of_extraction', default = 'htakKs', #default='rids', 
+    help='NLP-JP extractor (default htakKs ) h:head by token) t:tail by token a:head by chars k:tail by chars K: tail of chars w/o last 10 chars s:summary')
 parser.add_argument('-r', '--synreplace_rate', type=int, default=3, 
     help='rate (default 3) of synreplace_rate par sentence as int for transformers.')
 parser.add_argument('-i', '--randinsert_rate', type=int, default=3, 
@@ -43,34 +45,31 @@ if args.jupyter == 'CMD':
     max_epoch = args.max_epoch
     batch_size = args.batch_size
     transformflags = args.transformflags
+    pattern_of_extraction = args.pattern_of_extraction
     synreplace_rate = args.synreplace_rate
     randinsert_rate = args.randinsert_rate
     randdelete_rate = args.randdelete_rate
     randswap_rate = args.randswap_rate
     articletype = args.article_type
 else:
-    numof_learn = 100
+    numof_learn = 50
     numof_validation = 200
     max_epoch = 20
     batch_size = 64
     transformflags = 'n' #'rids'
+    pattern_of_extraction = 'htakKs'
     synreplace_rate = 3
     randinsert_rate = 3
     randdelete_rate = 0.08
     randswap_rate = 2
     articletype = 0
 
-#    transformflags = 'rids'
-#    articletype = 2
-#    numof_learn = 100
-#    numof_validation = 50
-
 articlelabel = ['dokujo_it', 'dokujo_peachy']
-print("num_of_learn:",numof_learn," max_epoch:", max_epoch," num_of_batch:", batch_size,
-      " articletype:", articlelabel[articletype])
-filestr = "l:"+str(numof_learn)+"_e:"+str(max_epoch)+"_b:"+str(batch_size)+"_t:"+transformflags+\
-    "_r:"+str(synreplace_rate)+'_i:'+str(randinsert_rate)+'_d:'+str(randdelete_rate)+'_s:'+str(randswap_rate)+\
-    "_a:"+articlelabel[articletype]
+print("num_of_learn=",numof_learn," max_epoch=", max_epoch," num_of_batch=", batch_size,
+      " articletype=", articlelabel[articletype])
+filestr = "l="+str(numof_learn)+"_e="+str(max_epoch)+"_b="+str(batch_size)+"_t="+transformflags+"_p="+pattern_of_extraction+\
+    "_r="+str(synreplace_rate)+'_i='+str(randinsert_rate)+'_d='+str(randdelete_rate)+'_s='+str(randswap_rate)+\
+    "_a="+articlelabel[articletype]
 print(filestr)
 transformflags = list(transformflags)
 
@@ -481,7 +480,7 @@ ssentences = np.array(summaries)
 emp = []
 asentences = np.append(emp, copy.deepcopy(sentences))
 ksentences = np.append(emp, copy.deepcopy(sentences))
-kksentences = np.append(emp, copy.deepcopy(sentences))
+Ksentences = np.append(emp, copy.deepcopy(sentences))
 
 # wcount moji me kara kesu
 for i in enumerate(sentences):
@@ -498,19 +497,7 @@ for i in enumerate(sentences):
     if len(i[1])>wcount:
         am = wcount+20
         a = sentences[i[0]][-am:]
-        kksentences[i[0]] = a[:wcount]
-
-
-# In[23]:
-
-
-#print(ksentences[2])
-
-
-# In[24]:
-
-
-#print(kksentences[2])
+        Ksentences[i[0]] = a[:wcount]
 
 
 # # BERT Tokenizerを用いて単語分割・IDへ変換
@@ -519,7 +506,7 @@ for i in enumerate(sentences):
 
 # # テスト実行
 
-# In[25]:
+# In[23]:
 
 
 # 最大単語数の確認
@@ -540,7 +527,7 @@ for sent in tsentences:
 #print('上記の最大単語数にSpecial token（[CLS], [SEP]）の+2をした値が最大単語数')
 
 
-# In[26]:
+# In[24]:
 
 
 def dicttoken(sentence):
@@ -561,18 +548,18 @@ def dicttoken(sentence):
     return ids, masks
 
 
-# In[27]:
+# In[25]:
 
 
 h_input_ids, h_attention_masks = dicttoken(hsentences)
 t_input_ids, t_attention_masks = dicttoken(tsentences)
 a_input_ids, a_attention_masks = dicttoken(asentences)
 k_input_ids, k_attention_masks = dicttoken(ksentences)
-kk_input_ids, kk_attention_masks = dicttoken(kksentences)
+K_input_ids, K_attention_masks = dicttoken(Ksentences)
 s_input_ids, s_attention_masks = dicttoken(ssentences)
 
 
-# In[28]:
+# In[26]:
 
 
 # リストに入ったtensorを縦方向（dim=0）へ結合
@@ -580,20 +567,20 @@ h_input_ids = torch.cat(h_input_ids, dim=0)
 t_input_ids = torch.cat(t_input_ids, dim=0)
 a_input_ids = torch.cat(a_input_ids, dim=0)
 k_input_ids = torch.cat(k_input_ids, dim=0)
-kk_input_ids = torch.cat(kk_input_ids, dim=0)
+K_input_ids = torch.cat(K_input_ids, dim=0)
 s_input_ids = torch.cat(s_input_ids, dim=0)
 h_attention_masks = torch.cat(h_attention_masks, dim=0)
 t_attention_masks = torch.cat(t_attention_masks, dim=0)
 a_attention_masks = torch.cat(a_attention_masks, dim=0)
 k_attention_masks = torch.cat(k_attention_masks, dim=0)
-kk_attention_masks = torch.cat(kk_attention_masks, dim=0)
+K_attention_masks = torch.cat(K_attention_masks, dim=0)
 s_attention_masks = torch.cat(s_attention_masks, dim=0)
 
 # tenosor型に変換
 labels = torch.tensor(labels)
 
 
-# In[29]:
+# In[27]:
 
 
 # 確認
@@ -613,7 +600,7 @@ print(ssentences.size)
 '''
 
 
-# In[30]:
+# In[28]:
 
 
 from torch.utils.data import TensorDataset, random_split
@@ -626,17 +613,17 @@ hdataset = TensorDataset(h_input_ids, h_attention_masks, labels)
 tdataset = TensorDataset(t_input_ids, t_attention_masks, labels)
 adataset = TensorDataset(a_input_ids, a_attention_masks, labels)
 kdataset = TensorDataset(k_input_ids, k_attention_masks, labels)
-kkdataset = TensorDataset(kk_input_ids, kk_attention_masks, labels)
+Kdataset = TensorDataset(K_input_ids, K_attention_masks, labels)
 sdataset = TensorDataset(s_input_ids, s_attention_masks, labels)
 
 
-# In[31]:
+# In[29]:
 
 
 #type(hdataset[0][0])
 
 
-# In[32]:
+# In[30]:
 
 
 num_dataset = len(hdataset)
@@ -650,7 +637,7 @@ val_size = len(hdataset) - train_size
 #print('検証データ数:{}'.format(val_size))
 
 
-# In[33]:
+# In[31]:
 
 
 # データローダーの作成
@@ -693,7 +680,7 @@ h_train_dataset, h_val_dataset = random_split(hdataset, [train_size, val_size])
 t_train_dataset, t_val_dataset = random_split(tdataset, [train_size, val_size])
 a_train_dataset, a_val_dataset = random_split(adataset, [train_size, val_size])
 k_train_dataset, k_val_dataset = random_split(kdataset, [train_size, val_size])
-kk_train_dataset, kk_val_dataset = random_split(kkdataset, [train_size, val_size])
+K_train_dataset, K_val_dataset = random_split(Kdataset, [train_size, val_size])
 s_train_dataset, s_val_dataset = random_split(sdataset, [train_size, val_size])
 
 h_train_dataset = MySubset(hdataset, indices[:train_size], data_transform)
@@ -704,13 +691,13 @@ a_train_dataset = MySubset(adataset, indices[:train_size], data_transform)
 a_val_dataset = MySubset(adataset, indices[train_size:])
 k_train_dataset = MySubset(kdataset, indices[:train_size], data_transform)
 k_val_dataset = MySubset(kdataset, indices[train_size:])
-kk_train_dataset = MySubset(kkdataset, indices[:train_size], data_transform)
-kk_val_dataset = MySubset(kkdataset, indices[train_size:])
+K_train_dataset = MySubset(Kdataset, indices[:train_size], data_transform)
+K_val_dataset = MySubset(Kdataset, indices[train_size:])
 s_train_dataset = MySubset(sdataset, indices[:train_size], data_transform)
 s_val_dataset = MySubset(sdataset, indices[train_size:])
 
 
-# In[34]:
+# In[32]:
 
 
 # 訓練データローダー
@@ -728,8 +715,8 @@ a_train_dataloader = DataLoader(
 k_train_dataloader = DataLoader(
             k_train_dataset, batch_size = batch_size, shuffle = True, num_workers=8)
 # letters ketsu -10
-kk_train_dataloader = DataLoader(
-            kk_train_dataset, batch_size = batch_size, shuffle = True, num_workers=8)
+K_train_dataloader = DataLoader(
+            K_train_dataset, batch_size = batch_size, shuffle = True, num_workers=8)
 # summary
 s_train_dataloader = DataLoader(
             s_train_dataset, batch_size = batch_size, shuffle = True, num_workers=8)
@@ -743,13 +730,13 @@ a_validation_dataloader = DataLoader(
             a_val_dataset, batch_size = 1, shuffle = False, num_workers = 8)
 k_validation_dataloader = DataLoader(
             k_val_dataset, batch_size = 1, shuffle = False, num_workers = 8)
-kk_validation_dataloader = DataLoader(
-            kk_val_dataset, batch_size = 1, shuffle = False, num_workers = 8)
+K_validation_dataloader = DataLoader(
+            K_val_dataset, batch_size = 1, shuffle = False, num_workers = 8)
 s_validation_dataloader = DataLoader(
             s_val_dataset, batch_size = 1, shuffle = False, num_workers = 8)
 
 
-# In[35]:
+# In[33]:
 
 
 from transformers import BertForSequenceClassification,AdamW,BertConfig
@@ -767,7 +754,7 @@ def loadmodel():
     return model, optimizer
 
 
-# In[36]:
+# In[34]:
 
 
 from tqdm import tqdm
@@ -802,8 +789,6 @@ def train(epoch, model, optimizer, dataloader):
             )
             wandb.log({'epoch': epoch, 'loss': lossi})
             train_loss += lossi
-#                print(output)
-#                print(output['logits'])
             alloutputs.append(output['logits'].to('cpu'))
     return train_loss, alloutputs
 
@@ -826,6 +811,7 @@ def validation(model, dataloader):
                 preds = output.logits.argmax(axis=1)
                 alloutputs.append(output.logits.to('cpu').clone())
                 lossi = loss.item()
+                '''
                 pbar.set_postfix(
                     OrderedDict(
                         Loss=lossi,
@@ -833,6 +819,7 @@ def validation(model, dataloader):
                         Len=len(alloutputs)
                     )
                 )
+                '''
                 wandb.log({'epoch': epoch, 'loss': lossi})
                 if numof_validation < iteration:
 #                    print('validation quit')
@@ -840,7 +827,7 @@ def validation(model, dataloader):
     return loss, alloutputs
 
 
-# In[37]:
+# In[35]:
 
 
 # 学習の実行
@@ -852,8 +839,8 @@ a_train_loss_ = []
 a_test_loss_ = []
 k_train_loss_ = []
 k_test_loss_ = []
-kk_train_loss_ = []
-kk_test_loss_ = []
+K_train_loss_ = []
+K_test_loss_ = []
 s_train_loss_ = []
 s_test_loss_ = []
 
@@ -861,107 +848,117 @@ h_train_loss = 0
 t_train_loss = 0
 a_train_loss = 0
 k_train_loss = 0
-kk_train_loss = 0
+K_train_loss = 0
 s_train_loss = 0
+
+nofs = 0
+
+
+# In[36]:
+
+
+if 'h' in pattern_of_extraction:
+    wandb.init(project="liBERTy-re-h")
+    model, optimizer = loadmodel()
+    for epoch in range(max_epoch):
+        h_train_ = train(epoch, model, optimizer,  h_train_dataloader)
+        h_train_loss_.append(h_train_)
+    wandb.finish()
+    wandb.init(project="liBERTy-re-h-v")
+    h_test_loss_ = validation(model, h_validation_dataloader)
+    wandb.finish()
+    nofs = len(h_test_loss_[1])
+
+
+# In[37]:
+
+
+if 't' in pattern_of_extraction:
+    wandb.init(project="liBERTy-re-t")
+    model, optimizer = loadmodel()
+    for epoch in range(max_epoch):
+        t_train_ = train(epoch, model, optimizer,  t_train_dataloader)
+        t_train_loss_.append(t_train_)
+    wandb.finish()
+    wandb.init(project="liBERTy-re-t-v")
+    t_test_loss_ = validation(model, t_validation_dataloader)
+    wandb.finish()
+    nofs = len(t_test_loss_[1])
 
 
 # In[38]:
 
 
-wandb.init(project="liBERTy-re2-h")
-model, optimizer = loadmodel()
-for epoch in range(max_epoch):
-    h_train_ = train(epoch, model, optimizer,  h_train_dataloader)
-    h_train_loss_.append(h_train_)
-#    if epoch%10 == 0:
-#        print('epoch: ', epoch)
-wandb.finish()
-wandb.init(project="liBERTy-re2-h-v")
-h_test_loss_ = validation(model, h_validation_dataloader)
-wandb.finish()
+if 'a' in pattern_of_extraction:
+    wandb.init(project="liBERTy-re-a")
+    model, optimizer = loadmodel()
+    for epoch in range(max_epoch):
+        a_train_ = train(epoch, model, optimizer,  a_train_dataloader)
+        a_train_loss_.append(a_train_)
+    wandb.finish()
+    wandb.init(project="liBERTy-re-a-v")
+    a_test_loss_ = validation(model, a_validation_dataloader)
+    wandb.finish()
+    nofs = len(a_test_loss_[1])
 
 
 # In[39]:
 
 
-wandb.init(project="liBERTy-re2-t")
-model, optimizer = loadmodel()
-for epoch in range(max_epoch):
-    t_train_ = train(epoch, model, optimizer,  t_train_dataloader)
-    t_train_loss_.append(t_train_)
-#    if epoch%10 == 0:
-#        print('epoch: ', epoch)
-wandb.finish()
-wandb.init(project="liBERTy-re2-t-v")
-t_test_loss_ = validation(model, t_validation_dataloader)
-wandb.finish()
+if 'k' in pattern_of_extraction:
+    wandb.init(project="liBERTy-re-k")
+    model, optimizer = loadmodel()
+    for epoch in range(max_epoch):
+        k_train_ = train(epoch, model, optimizer,  k_train_dataloader)
+        k_train_loss_.append(k_train_)
+    wandb.finish()
+    wandb.init(project="liBERTy-re-k-v")
+    k_test_loss_ = validation(model, k_validation_dataloader)
+    wandb.finish()
+    nofs = len(k_test_loss_[1])
 
 
 # In[40]:
 
 
-wandb.init(project="liBERTy-re2-a")
-model, optimizer = loadmodel()
-for epoch in range(max_epoch):
-    a_train_ = train(epoch, model, optimizer,  a_train_dataloader)
-    a_train_loss_.append(a_train_)
-#    if epoch%10 == 0:
-#        print('epoch: ', epoch)
-wandb.finish()
-wandb.init(project="liBERTy-re2-a-v")
-a_test_loss_ = validation(model, a_validation_dataloader)
-wandb.finish()
+if 'K' in pattern_of_extraction:
+    wandb.init(project="liBERTy-re-K")
+    model, optimizer = loadmodel()
+    for epoch in range(max_epoch):
+        K_train_ = train(epoch, model, optimizer,  K_train_dataloader)
+        K_train_loss_.append(K_train_)
+    wandb.finish()
+    wandb.init(project="liBERTy-re-K-v")
+    K_test_loss_ = validation(model, K_validation_dataloader)
+    wandb.finish()
+    nofs = len(K_test_loss_[1])
 
 
 # In[41]:
 
 
-wandb.init(project="liBERTy-re2-k")
-model, optimizer = loadmodel()
-for epoch in range(max_epoch):
-    k_train_ = train(epoch, model, optimizer,  k_train_dataloader)
-    k_train_loss_.append(k_train_)
-#    if epoch%10 == 0:
-#        print('epoch: ', epoch)
-wandb.finish()
-wandb.init(project="liBERTy-re2-k-v")
-k_test_loss_ = validation(model, k_validation_dataloader)
-wandb.finish()
+if 's' in pattern_of_extraction:
+    wandb.init(project="liBERTy-re-s")
+    model, optimizer = loadmodel()
+    for epoch in range(max_epoch):
+        s_train_ = train(epoch, model, optimizer,  s_train_dataloader)
+        s_train_loss_.append(s_train_)
+    wandb.finish()
+    wandb.init(project="liBERTy-re-s-v")
+    s_test_loss_ = validation(model, s_validation_dataloader)
+    wandb.finish()
+    nofs = len(s_test_loss_[1])
 
 
 # In[42]:
 
 
-wandb.init(project="liBERTy-re2-kk")
-model, optimizer = loadmodel()
-for epoch in range(max_epoch):
-    kk_train_ = train(epoch, model, optimizer,  kk_train_dataloader)
-    kk_train_loss_.append(kk_train_)
-#    if epoch%10 == 0:
-#        print('epoch: ', epoch)
-wandb.finish()
-wandb.init(project="liBERTy-re2-kk-v")
-kk_test_loss_ = validation(model, kk_validation_dataloader)
-wandb.finish()
+if nofs == 0:
+    print("No Result!")
+    exit()
 
 
 # In[43]:
-
-
-wandb.init(project="liBERTy-re2-s")
-model, optimizer = loadmodel()
-for epoch in range(max_epoch):
-    s_train_ = train(epoch, model, optimizer,  s_train_dataloader)
-    s_train_loss_.append(s_train_)
-#    if epoch%10 == 0:
-#        print('epoch: ', epoch)
-wandb.finish()
-wandb.init(project="liBERTy-re2-s-v")
-s_test_loss_ = validation(model, s_validation_dataloader)
-wandb.finish()
-
-
-# In[44]:
 
 
 sents = []
@@ -976,26 +973,37 @@ sents = pd.DataFrame(sents)
 
 # # type soroete X train test Y train test wo kaizan suru
 
-# In[45]:
+# In[44]:
 
 
 h_pred_ = []
 t_pred_ = []
 a_pred_ = []
 k_pred_ = []
-kk_pred_ = []
+K_pred_ = []
 s_pred_ = []
 
-for i in range(len(h_test_loss_[1])):
-    h_pred_.append(np.argmax(np.array(h_test_loss_[1][i])))
-    t_pred_.append(np.argmax(np.array(t_test_loss_[1][i])))
-    a_pred_.append(np.argmax(np.array(a_test_loss_[1][i])))
-    k_pred_.append(np.argmax(np.array(k_test_loss_[1][i])))
-    kk_pred_.append(np.argmax(np.array(kk_test_loss_[1][i])))
-    s_pred_.append(np.argmax(np.array(s_test_loss_[1][i])))
+if 'h' in pattern_of_extraction:
+    for i in range(nofs):
+        h_pred_.append(np.argmax(np.array(h_test_loss_[1][i])))
+if 't' in pattern_of_extraction:
+    for i in range(nofs):
+        t_pred_.append(np.argmax(np.array(t_test_loss_[1][i])))
+if 'a' in pattern_of_extraction:
+    for i in range(nofs):
+        a_pred_.append(np.argmax(np.array(a_test_loss_[1][i])))
+if 'k' in pattern_of_extraction:
+    for i in range(nofs):
+        k_pred_.append(np.argmax(np.array(k_test_loss_[1][i])))
+if 'K' in pattern_of_extraction:
+    for i in range(nofs):
+        K_pred_.append(np.argmax(np.array(K_test_loss_[1][i])))
+if 's' in pattern_of_extraction:
+    for i in range(nofs):
+        s_pred_.append(np.argmax(np.array(s_test_loss_[1][i])))
 
 
-# In[46]:
+# In[45]:
 
 
 vlabel = []
@@ -1004,18 +1012,24 @@ for _,_,label in h_validation_dataloader:
     vlabel.append(copy.deepcopy(label.detach().numpy()))
 
 
-# In[47]:
+# In[46]:
 
 
 h_pred_df = pd.DataFrame(h_pred_, columns=['h_pred_label'])
 t_pred_df = pd.DataFrame(t_pred_, columns=['t_pred_label'])
 a_pred_df = pd.DataFrame(a_pred_, columns=['a_pred_label'])
 k_pred_df = pd.DataFrame(k_pred_, columns=['k_pred_label'])
-kk_pred_df = pd.DataFrame(kk_pred_, columns=['kk_pred_label'])
+K_pred_df = pd.DataFrame(K_pred_, columns=['K_pred_label'])
 s_pred_df = pd.DataFrame(s_pred_, columns=['s_pred_label'])
 label_df = pd.DataFrame(vlabel, columns=['true_label'])
-accuracy_df = pd.concat([h_pred_df, t_pred_df, a_pred_df, k_pred_df, kk_pred_df, s_pred_df, label_df], axis=1)
+accuracy_df = pd.concat([h_pred_df, t_pred_df, a_pred_df, k_pred_df, K_pred_df, s_pred_df, label_df], axis=1)
 accuracy_df.head(5)
+
+
+# In[47]:
+
+
+nofs
 
 
 # In[48]:
@@ -1025,19 +1039,42 @@ hpreds = h_pred_df.values
 tpreds = t_pred_df.values
 apreds = a_pred_df.values
 kpreds = k_pred_df.values
-kkpreds = kk_pred_df.values
+Kpreds = K_pred_df.values
 spreds = s_pred_df.values
-preds = []
-pred = 0
-m = 7
+pred = [0]*nofs
+preds = [0]*nofs
+m = 0
 
-for i in range(len(hpreds)):
-    pred = hpreds[i]+tpreds[i]+apreds[i]+kpreds[i]+kkpreds[i]+spreds[i]
-    if pred/m < 0.5:
-        pred = 0
+if 'h' in pattern_of_extraction:
+    m+=1
+    for i in range(nofs):
+        pred[i] += hpreds[i][0]
+if 't' in pattern_of_extraction:
+    m+=1
+    for i in range(nofs):
+        pred[i] += tpreds[i][0]
+if 'a' in pattern_of_extraction:
+    m+=1
+    for i in range(nofs):
+        pred[i] += apreds[i][0]
+if 'k' in pattern_of_extraction:
+    m+=1
+    for i in range(nofs):
+        pred[i] += kpreds[i][0]
+if 'K' in pattern_of_extraction:
+    m+=1
+    for i in range(nofs):
+        pred[i] += Kpreds[i][0]
+if 's' in pattern_of_extraction:
+    m+=1
+    for i in range(nofs):
+        pred[i] += spreds[i][0]
+for i in range(nofs):
+    if pred[i]/m > 0.5:
+        preds[i] = 1
     else:
-        pred = 1
-    preds.append(pred)
+        preds[i] = 0
+print("numer of pattern:", m, " number of sentences", nofs)
 
 
 # In[49]:
@@ -1049,46 +1086,7 @@ ensaccuracy_df = pd.concat([preds_df, label_df], axis=1)
 #ensaccuracy_df
 
 
-# # pred_label accuracy
-
 # In[50]:
-
-
-cor = 0
-ypnum = 0 #yosoku
-spnum = 0 #seikai
-pnum = 0
-rnum = 0
-for i in range(len(preds_df)):
-    if preds_df.values[i] == label_df.values[i]:
-        cor += 1
-    if preds_df.values[i] == 0:
-        ypnum += 1
-        if label_df.values[i] == 0:
-            pnum += 1
-    if label_df.values[i] == 0:
-        spnum += 1
-        if preds_df.values[i] == 0:
-            rnum += 1
-        
-100*cor/len(preds_df)
-
-
-# # pred_label F1
-
-# In[51]:
-
-
-'''
-# tekigou
-tp = pnum/ypnum
-# saigen
-sp = rnum/spnum
-(tp*sp)/(tp+sp)
-'''
-
-
-# In[52]:
 
 
 from sklearn.metrics import f1_score
@@ -1099,73 +1097,91 @@ def fscore(pdf):
     return f1_score(pdf, label_df.values[:len(pdf)])
 
 
-# In[53]:
+# In[51]:
 
 
-print('head', accuracy(hpreds), fscore(hpreds))
-print('tail', accuracy(tpreds), fscore(tpreds))
-print('atama', accuracy(apreds), fscore(apreds))
-print('ketsu', accuracy(kpreds), fscore(kpreds))
-print('ketsu-10', accuracy(kkpreds), fscore(kkpreds))
-print('summary', accuracy(spreds), fscore(spreds))
+if 'h' in pattern_of_extraction:
+    print('h', accuracy(hpreds), fscore(hpreds))
+if 't' in pattern_of_extraction:
+    print('t', accuracy(tpreds), fscore(tpreds))
+if 'a' in pattern_of_extraction:
+    print('a', accuracy(apreds), fscore(apreds))
+if 'k' in pattern_of_extraction:
+    print('k', accuracy(kpreds), fscore(kpreds))
+if 'K' in pattern_of_extraction:
+    print('K', accuracy(Kpreds), fscore(Kpreds))
+if 's' in pattern_of_extraction:
+    print('s', accuracy(spreds), fscore(spreds))
 print('all', accuracy(preds_df.values), fscore(preds_df.values))
 
 f = open('acc'+filestr+'.csv', 'w')
-f.write('head,'+str(accuracy(hpreds))+','+str(fscore(hpreds))+'\n')
-f.write('tail,'+str(accuracy(tpreds))+','+str(fscore(tpreds))+'\n')
-f.write('atama,'+str(accuracy(apreds))+','+str(fscore(apreds))+'\n')
-f.write('ketsu,'+str(accuracy(kpreds))+','+str(fscore(kpreds))+'\n')
-f.write('ketsu-10,'+str(accuracy(kkpreds))+','+str(fscore(kkpreds))+'\n')
-f.write('summary,'+str(accuracy(spreds))+','+str(fscore(spreds))+'\n')
+if 'h' in pattern_of_extraction:
+    f.write('h,'+str(accuracy(hpreds))+','+str(fscore(hpreds))+'\n')
+if 't' in pattern_of_extraction:
+    f.write('t,'+str(accuracy(tpreds))+','+str(fscore(tpreds))+'\n')
+if 'a' in pattern_of_extraction:
+    f.write('a,'+str(accuracy(apreds))+','+str(fscore(apreds))+'\n')
+if 'k' in pattern_of_extraction:
+    f.write('k,'+str(accuracy(kpreds))+','+str(fscore(kpreds))+'\n')
+if 'K' in pattern_of_extraction:
+    f.write('K,'+str(accuracy(Kpreds))+','+str(fscore(Kpreds))+'\n')
+if 's' in pattern_of_extraction:
+    f.write('s,'+str(accuracy(spreds))+','+str(fscore(spreds))+'\n')
 f.write('all,'+str(accuracy(preds_df.values))+','+str(fscore(preds_df.values))+'\n')
+f.close()
+
+
+# In[52]:
+
+
+h_tloss = []
+t_tloss = []
+a_tloss = []
+k_tloss = []
+K_tloss = []
+s_tloss = []
+
+for i in range(max_epoch):
+    if 'h' in pattern_of_extraction:
+        h_tloss.append(h_train_loss_[i][0])
+    if 't' in pattern_of_extraction:
+        t_tloss.append(t_train_loss_[i][0])
+    if 'a' in pattern_of_extraction:
+        a_tloss.append(a_train_loss_[i][0])
+    if 'k' in pattern_of_extraction:
+        k_tloss.append(k_train_loss_[i][0])
+    if 'K' in pattern_of_extraction:
+        K_tloss.append(K_train_loss_[i][0])
+    if 's' in pattern_of_extraction:
+        s_tloss.append(s_train_loss_[i][0])
+
+
+# In[53]:
+
+
+import csv
+f = open('ens_augens-re-rep-'+filestr+'.csv', 'w')
+f.write('h, t, a, k, K, s\n')
+writer = csv.writer(f)
+writer.writerows(map(lambda h, t, a, k, K, s: [h, t, a, k, K, s], h_tloss, t_tloss, a_tloss,
+                  k_tloss, K_tloss, s_tloss))
 f.close()
 
 
 # In[54]:
 
 
-H_train_loss = []
-T_train_loss = []
-A_train_loss = []
-K_train_loss = []
-KK_train_loss = []
-S_train_loss = []
-
-for i in range(max_epoch):
-    H_train_loss.append(h_train_loss_[i][0])
-    T_train_loss.append(t_train_loss_[i][0])
-    A_train_loss.append(a_train_loss_[i][0])
-    K_train_loss.append(k_train_loss_[i][0])
-    KK_train_loss.append(kk_train_loss_[i][0])
-    S_train_loss.append(s_train_loss_[i][0])
-
-
-# In[55]:
-
-
-import csv
-f = open('ens_augens-re2-rep-'+filestr+'.csv', 'w')
-f.write('H, T, A, K, KK, S\n')
-writer = csv.writer(f)
-writer.writerows(map(lambda h, t, a, k, kk, s: [h, t, a, k, kk, s], H_train_loss, T_train_loss, A_train_loss,
-                  K_train_loss, KK_train_loss, S_train_loss))
-f.close()
-
-
-# In[56]:
-
-
 import matplotlib.pyplot as plt
 
-plt.plot(range(len(H_train_loss)), H_train_loss, label="Head")
-plt.plot(range(len(T_train_loss)), T_train_loss, label="Tail")
-plt.plot(range(len(A_train_loss)), A_train_loss, label="WakatiHead")
-plt.plot(range(len(K_train_loss)), K_train_loss, label="WakatiTail")
-plt.plot(range(len(KK_train_loss)), KK_train_loss, label="WakatiTail-10")
-plt.plot(range(len(S_train_loss)), S_train_loss, label="Summary")
+plt.plot(range(len(h_tloss)), h_tloss, label="h")
+plt.plot(range(len(t_tloss)), t_tloss, label="t")
+plt.plot(range(len(a_tloss)), a_tloss, label="a")
+plt.plot(range(len(k_tloss)), k_tloss, label="k")
+plt.plot(range(len(K_tloss)), K_tloss, label="K")
+plt.plot(range(len(s_tloss)), s_tloss, label="s")
 plt.legend()
 plt.xlabel("Epochs")
 plt.ylabel("Loss")
-plt.savefig("ens_augens-re2-fig-"+filestr+".png", format="png", dpi=300)
+plt.savefig("ens_augens-re-fig-"+filestr+".png", format="png", dpi=300)
 plt.show()
 
